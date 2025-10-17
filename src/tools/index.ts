@@ -84,7 +84,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "search_notes",
-				description: "Search for notes in the Obsidian vault by content or filename. Use this to find notes containing specific text or with specific names. Searches are case-insensitive and match against both file names and file contents. Returns a list of matching file paths.",
+				description: "Search for notes in the Obsidian vault by content or filename. Returns structured JSON with detailed search results including file paths, line numbers, column positions, snippets with context, and match ranges for highlighting. Searches are case-insensitive and match against both file names and file contents. Use this to find notes containing specific text or with specific names.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -98,7 +98,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "get_vault_info",
-				description: "Get information about the Obsidian vault including vault name, total file count, markdown file count, and root path. Use this to understand the vault structure and get an overview of available content. No parameters required.",
+				description: "Get information about the Obsidian vault. Returns structured JSON with vault name, path, total file count, total folder count, markdown file count, and total size in bytes. Use this to understand the vault structure and get an overview of available content. No parameters required.",
 				inputSchema: {
 					type: "object",
 					properties: {}
@@ -106,13 +106,13 @@ export class ToolRegistry {
 			},
 			{
 				name: "list_notes",
-				description: "List markdown files in the vault or in a specific folder. Use this to explore vault structure, verify paths exist, or see what files are available. Call without arguments to list all files in the vault, or provide a folder path to list files in that folder. This is essential for discovering what files exist before reading, updating, or deleting them.",
+				description: "List files and directories in the vault or in a specific folder. Returns structured JSON with file metadata (name, path, size, dates) and directory metadata (name, path, child count). Use this to explore vault structure, verify paths exist, or see what files are available. Returns direct children only (non-recursive). Items are sorted with directories first, then files, alphabetically (case-insensitive) within each group.",
 				inputSchema: {
 					type: "object",
 					properties: {
-						folder: {
+						path: {
 							type: "string",
-							description: "Optional vault-relative folder path to list files from (e.g., 'projects' or 'daily/2024'). Omit to list all files in vault. Do not use leading or trailing slashes. Paths are case-sensitive on macOS/Linux."
+							description: "Optional vault-relative folder path to list items from (e.g., 'projects' or 'daily/2024'). To list root-level items, omit this parameter, use empty string '', or use '.'. Do NOT use leading slashes (e.g., '/' or '/folder') as they are invalid and will cause an error. Paths are case-sensitive on macOS/Linux."
 						}
 					}
 				}
@@ -136,7 +136,7 @@ export class ToolRegistry {
 				case "get_vault_info":
 					return await this.vaultTools.getVaultInfo();
 				case "list_notes":
-					return await this.vaultTools.listNotes(args.folder);
+					return await this.vaultTools.listNotes(args.path);
 				default:
 					return {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],

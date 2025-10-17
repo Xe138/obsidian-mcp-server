@@ -43,7 +43,9 @@ describe('Enhanced Parent Folder Detection', () => {
 		});
 
 		test('should detect when parent path is a file, not a folder', async () => {
-			const mockFile = { path: 'parent.md' } as TFile;
+			// Create a proper TFile instance
+			const mockFile = Object.create(TFile.prototype);
+			Object.assign(mockFile, { path: 'parent.md', name: 'parent.md', basename: 'parent', extension: 'md' });
 			
 			// Setup: parent path exists but is a file
 			vault.getAbstractFileByPath.mockImplementation((path: string) => {
@@ -222,7 +224,9 @@ describe('Enhanced Parent Folder Detection', () => {
 		});
 
 		test('should provide clear error when parent is a file', async () => {
-			const mockFile = { path: 'file.md' } as TFile;
+			// Create a proper TFile instance
+			const mockFile = Object.create(TFile.prototype);
+			Object.assign(mockFile, { path: 'file.md', name: 'file.md', basename: 'file', extension: 'md' });
 			
 			vault.getAbstractFileByPath.mockImplementation((path: string) => {
 				if (path === 'file.md') return mockFile;

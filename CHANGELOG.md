@@ -2,6 +2,161 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [2.0.0] - 2025-10-16
+
+### 🔧 Phase 2.1: Post-Testing Fixes
+
+Based on testing feedback, the following improvements were made to the Phase 2 implementation:
+
+#### Fixed
+
+**Root Listing Semantics (`src/tools/vault-tools.ts`)**
+- Clarified root path handling: `undefined`, `""` (empty string), or `"."` all represent the vault root
+- Root listing now correctly returns direct children only (excludes vault root itself)
+- Added explicit check to skip vault root folder (path === '')
+- Improved code clarity with explicit `isRootPath` check
+
+**Alphabetical Sorting**
+- Fixed sorting to be case-insensitive for stable, consistent ordering
+- Directories are sorted alphabetically (case-insensitive), then files alphabetically (case-insensitive)
+- Ensures predictable order for names like "CTP Lancaster" and "Construction Game"
+
+**Directory Metadata**
+- Added logic to populate `modified` timestamp from filesystem if available
+- Falls back to `0` when filesystem metadata is not available (which is typical for directories)
+- Added documentation explaining when `modified` may be `0`
+- **Note:** Obsidian's TFolder API doesn't include `stat` property, so directories will typically show `modified: 0`
+
+**Documentation (`src/tools/index.ts`)**
+- Updated `list_notes` description to document root path options (`""` or `"."`)
+- Added explicit warning that leading slashes (e.g., `"/"` or `"/folder"`) are invalid
+- Clarified that sorting is case-insensitive within each group
+- Added note that only direct children are returned (non-recursive)
+
+#### Technical Details
+
+**Root Path Handling:**
+```typescript
+// All of these list the vault root:
+list_notes()              // undefined
+list_notes({ path: "" })  // empty string
+list_notes({ path: "." }) // dot
+```
+
+**Invalid Paths:**
+```typescript
+// These will error:
+list_notes({ path: "/" })       // leading slash
+list_notes({ path: "/folder" }) // leading slash
+```
+
+---
+
+### 🔄 Phase 2: API Unification & Typed Results (BREAKING CHANGES)
+
+This release introduces structured, typed responses for all tools and unifies parameter naming. **Note: This is a breaking change as backwards compatibility is not maintained.**
+
+#### Added
+
+**Typed Result Interfaces (`src/types/mcp-types.ts`)**
+- `FileMetadata` - Structured file information (kind, name, path, extension, size, modified, created)
+- `DirectoryMetadata` - Structured directory information (kind, name, path, childrenCount, modified)
+- `VaultInfo` - Structured vault information (name, path, totalFiles, totalFolders, markdownFiles, totalSize)
+- `SearchMatch` - Detailed search match information (path, line, column, snippet, matchRanges)
+- `SearchResult` - Comprehensive search results (query, matches, totalMatches, filesSearched, filesWithMatches)
+- `ItemKind` - Type union for "file" | "directory"
+
+**Enhanced Tool Responses**
+- All tools now return structured JSON instead of plain text
+- Consistent response format across all operations
+- Machine-readable data for better integration
+
+#### Changed
+
+**`list_notes` Tool (BREAKING)**
+- Parameter: `folder` → `path` (breaking change - `folder` parameter removed)
+- Response: Now returns array of `FileMetadata` and `DirectoryMetadata` objects
+- Behavior: Lists direct children only (non-recursive)
+- Includes both files AND directories (not just markdown files)
+- Sorted: directories first, then files, alphabetically
+- Each item includes detailed metadata (size, dates, child count)
+
+**`search_notes` Tool (BREAKING)**
+- Response: Now returns structured `SearchResult` object
+- Includes line numbers, column positions, and context snippets
+- Provides match ranges for highlighting
+- Tracks files searched and files with matches
+- Filename matches indicated with line: 0
+
+**`get_vault_info` Tool (BREAKING)**
+- Response: Now returns structured `VaultInfo` object
+- Added: `totalFolders` count
+- Added: `totalSize` in bytes
+- Renamed: `rootPath` → `path`
+
+**Tool Descriptions**
+- Updated all tool descriptions to reflect structured JSON responses
+- Clarified return value formats
+- Removed deprecated `folder` parameter
+
+#### Implementation Details
+
+**`src/tools/vault-tools.ts`**
+- `searchNotes()` - Complete rewrite with line-by-line search and snippet extraction
+- `getVaultInfo()` - Added folder counting and size calculation
+- `listNotes()` - Rewritten to return structured metadata for files and directories
+- Added `createFileMetadata()` helper method
+- Added `createDirectoryMetadata()` helper method
+
+**`src/tools/index.ts`**
+- Updated tool schemas to use `path` parameter only
+- Updated tool descriptions to document structured responses
+- Modified `callTool()` to pass `path` parameter
+
+#### Migration Guide
+
+**Before (v1.x):**
+```javascript
+// list_notes returned plain text
+"Found 3 notes:\nfile1.md\nfile2.md\nfile3.md"
+
+// search_notes returned plain text
+"Found 2 notes:\npath/to/note1.md\npath/to/note2.md"
+
+// get_vault_info returned simple object
+{ "name": "MyVault", "totalFiles": 100, "markdownFiles": 80, "rootPath": "/path" }
+```
+
+**After (v2.x):**
+```javascript
+// list_notes returns structured array
+[
+  { "kind": "directory", "name": "folder1", "path": "folder1", "childrenCount": 5, "modified": 0 },
+  { "kind": "file", "name": "note.md", "path": "note.md", "extension": "md", "size": 1024, "modified": 1697472000000, "created": 1697472000000 }
+]
+
+// search_notes returns detailed matches
+{
+  "query": "TODO",
+  "matches": [
+    { "path": "note.md", "line": 5, "column": 10, "snippet": "...context around TODO item...", "matchRanges": [{ "start": 15, "end": 19 }] }
+  ],
+  "totalMatches": 1,
+  "filesSearched": 100,
+  "filesWithMatches": 1
+}
+
+// get_vault_info returns comprehensive info
+{ "name": "MyVault", "path": "/path", "totalFiles": 100, "totalFolders": 20, "markdownFiles": 80, "totalSize": 5242880 }
+```
+
+#### Benefits
+- **Machine-readable**: Structured JSON for easy parsing and integration
+- **Detailed metadata**: Rich information for each file and directory
+- **Search precision**: Line numbers, columns, and snippets for exact match location
+- **Consistency**: Unified response format across all tools
+- **Type safety**: Well-defined TypeScript interfaces
+
 ## [1.2.0] - 2025-10-16
 
 ### 📁 Enhanced Parent Folder Detection (Phase 1.5)

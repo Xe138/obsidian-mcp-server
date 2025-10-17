@@ -46,8 +46,8 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P0** | Error Message Improvements | 1 day | ✅ Complete |
 | **P0** | Enhanced Parent Folder Detection | 0.5 days | ✅ Complete |
 | **P0** | Enhanced Authentication | 2-3 days | ✅ Complete |
-| **P1** | API Unification | 2-3 days | ⏳ Pending |
-| **P1** | Typed Results | 1-2 days | ⏳ Pending |
+| **P1** | API Unification | 2-3 days | ✅ Complete |
+| **P1** | Typed Results | 1-2 days | ✅ Complete |
 | **P1** | Discovery Endpoints | 2-3 days | ⏳ Pending |
 | **P1** | Write Operations & Concurrency | 5-6 days | ⏳ Pending |
 | **P2** | List Ergonomics | 3-4 days | ⏳ Pending |
@@ -57,8 +57,8 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
 
 **Total Estimated Effort:** 29.5-42.5 days  
-**Completed:** 2.5-3.5 days (Phase 1.1-1.5)  
-**Remaining:** 27-39 days
+**Completed:** 5.5-8.5 days (Phase 1.1-1.5, Phase 2)  
+**Remaining:** 24-34 days
 
 ---
 
@@ -312,7 +312,8 @@ Improve bearer token authentication with automatic secure key generation and enh
 
 **Priority:** P1  
 **Dependencies:** Phase 1  
-**Estimated Effort:** 3-5 days
+**Estimated Effort:** 3-5 days  
+**Status:** ✅ Complete
 
 ### Goals
 
@@ -322,14 +323,14 @@ Standardize parameter naming and return structured, typed results.
 
 #### 2.1 Parameter Unification
 
-- [ ] Standardize on `path` parameter for all file/folder operations
-- [ ] Keep `folder` as deprecated alias for backward compatibility
-- [ ] Update tool schemas in `handleListTools()`
-- [ ] Add deprecation warnings to documentation
+- [x] Standardize on `path` parameter for all file/folder operations
+- [x] Remove `folder` parameter (breaking change)
+- [x] Update tool schemas in `handleListTools()`
+- [x] Update documentation
 
 **Changes:**
 - `list_notes({ folder })` → `list_notes({ path })`
-- Document `folder` as deprecated but still functional
+- `folder` parameter completely removed
 
 #### 2.2 Typed Result Interfaces
 
@@ -385,16 +386,17 @@ export interface SearchResult {
 
 #### 2.3 Update Tool Return Values
 
-- [ ] Modify `listNotes` to return structured `FileMetadata[]` or `DirectoryMetadata[]`
-- [ ] Modify `getVaultInfo` to return `VaultInfo`
-- [ ] Modify `searchNotes` to return `SearchResult`
-- [ ] Return JSON-serialized structured data instead of plain text
+- [x] Modify `listNotes` to return structured `FileMetadata[]` or `DirectoryMetadata[]`
+- [x] Modify `getVaultInfo` to return `VaultInfo`
+- [x] Modify `searchNotes` to return `SearchResult`
+- [x] Return JSON-serialized structured data instead of plain text
 
 #### 2.4 Documentation Updates
 
-- [ ] Update README with new response formats
-- [ ] Add examples of structured responses
-- [ ] Document backward compatibility notes
+- [x] Update CHANGELOG with new response formats
+- [x] Add examples of structured responses
+- [x] Document migration guide from v1.x to v2.x
+- [x] Mark Phase 2 as complete in ROADMAP
 
 ---
 

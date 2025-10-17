@@ -61,3 +61,49 @@ export interface CallToolResult {
 	content: ContentBlock[];
 	isError?: boolean;
 }
+
+// Phase 2: Typed Result Interfaces
+export type ItemKind = "file" | "directory";
+
+export interface FileMetadata {
+	kind: "file";
+	name: string;
+	path: string;
+	extension: string;
+	size: number;
+	modified: number;
+	created: number;
+}
+
+export interface DirectoryMetadata {
+	kind: "directory";
+	name: string;
+	path: string;
+	childrenCount: number;
+	modified: number;
+}
+
+export interface VaultInfo {
+	name: string;
+	path: string;
+	totalFiles: number;
+	totalFolders: number;
+	markdownFiles: number;
+	totalSize: number;
+}
+
+export interface SearchMatch {
+	path: string;
+	line: number;
+	column: number;
+	snippet: string;
+	matchRanges: Array<{ start: number; end: number }>;
+}
+
+export interface SearchResult {
+	query: string;
+	matches: SearchMatch[];
+	totalMatches: number;
+	filesSearched: number;
+	filesWithMatches: number;
+}

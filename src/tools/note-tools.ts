@@ -91,7 +91,15 @@ export class NoteTools {
 		// Explicit parent folder detection (before write operation)
 		const parentPath = PathUtils.getParentPath(normalizedPath);
 		if (parentPath) {
-			// Check if parent exists
+			// First check if parent path is actually a file (not a folder)
+			if (PathUtils.fileExists(this.app, parentPath)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(parentPath) }],
+					isError: true
+				};
+			}
+			
+			// Check if parent folder exists
 			if (!PathUtils.pathExists(this.app, parentPath)) {
 				if (createParents) {
 					// Auto-create parent folders recursively
@@ -110,14 +118,6 @@ export class NoteTools {
 						isError: true
 					};
 				}
-			}
-			
-			// Check if parent is actually a folder (not a file)
-			if (PathUtils.fileExists(this.app, parentPath)) {
-				return {
-					content: [{ type: "text", text: ErrorMessages.notAFolder(parentPath) }],
-					isError: true
-				};
 			}
 		}
 
