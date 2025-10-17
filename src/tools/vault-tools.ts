@@ -1,9 +1,10 @@
 import { App, TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult, FolderWaypointResult, FolderNoteResult } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { GlobUtils } from '../utils/glob-utils';
 import { SearchUtils } from '../utils/search-utils';
+import { WaypointUtils } from '../utils/waypoint-utils';
 
 export class VaultTools {
 	constructor(private app: App) {}
@@ -591,6 +592,98 @@ export class VaultTools {
 				content: [{
 					type: "text",
 					text: `Waypoint search error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	async getFolderWaypoint(path: string): Promise<CallToolResult> {
+		try {
+			// Normalize and validate path
+			const normalizedPath = PathUtils.normalizePath(path);
+			
+			// Resolve file
+			const file = PathUtils.resolveFile(this.app, normalizedPath);
+			if (!file) {
+				return {
+					content: [{
+						type: "text",
+						text: ErrorMessages.fileNotFound(normalizedPath)
+					}],
+					isError: true
+				};
+			}
+
+			// Read file content
+			const content = await this.app.vault.read(file);
+
+			// Extract waypoint block
+			const waypointBlock = WaypointUtils.extractWaypointBlock(content);
+
+			const result: FolderWaypointResult = {
+				path: file.path,
+				hasWaypoint: waypointBlock.hasWaypoint,
+				waypointRange: waypointBlock.waypointRange,
+				links: waypointBlock.links,
+				rawContent: waypointBlock.rawContent
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Get folder waypoint error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	async isFolderNote(path: string): Promise<CallToolResult> {
+		try {
+			// Normalize and validate path
+			const normalizedPath = PathUtils.normalizePath(path);
+			
+			// Resolve file
+			const file = PathUtils.resolveFile(this.app, normalizedPath);
+			if (!file) {
+				return {
+					content: [{
+						type: "text",
+						text: ErrorMessages.fileNotFound(normalizedPath)
+					}],
+					isError: true
+				};
+			}
+
+			// Check if it's a folder note
+			const folderNoteInfo = await WaypointUtils.isFolderNote(this.app, file);
+
+			const result: FolderNoteResult = {
+				path: file.path,
+				isFolderNote: folderNoteInfo.isFolderNote,
+				reason: folderNoteInfo.reason,
+				folderPath: folderNoteInfo.folderPath
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Is folder note error: ${(error as Error).message}`
 				}],
 				isError: true
 			};

@@ -124,6 +124,22 @@ export interface WaypointSearchResult {
 	filesSearched: number;
 }
 
+// Phase 7: Waypoint Support Types
+export interface FolderWaypointResult {
+	path: string;
+	hasWaypoint: boolean;
+	waypointRange?: { start: number; end: number };
+	links?: string[];
+	rawContent?: string;
+}
+
+export interface FolderNoteResult {
+	path: string;
+	isFolderNote: boolean;
+	reason: 'basename_match' | 'waypoint_marker' | 'both' | 'none';
+	folderPath?: string;
+}
+
 // Phase 3: Discovery Endpoint Types
 export interface StatResult {
 	path: string;

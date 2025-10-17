@@ -3,6 +3,7 @@ import { CallToolResult, ParsedNote, ExcalidrawMetadata } from '../types/mcp-typ
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { FrontmatterUtils } from '../utils/frontmatter-utils';
+import { WaypointUtils } from '../utils/waypoint-utils';
 
 export class NoteTools {
 	constructor(private app: App) {}
@@ -230,6 +231,28 @@ export class NoteTools {
 		}
 
 		try {
+			// Check for waypoint edit protection
+			const currentContent = await this.app.vault.read(file);
+			const waypointCheck = WaypointUtils.wouldAffectWaypoint(currentContent, content);
+			
+			if (waypointCheck.affected) {
+				return {
+					content: [{ 
+						type: "text", 
+						text: `Cannot update note: This would modify a Waypoint block.\n\n` +
+							`Waypoint blocks (%% Begin Waypoint %% ... %% End Waypoint %%) are auto-generated ` +
+							`by the Waypoint plugin and should not be manually edited.\n\n` +
+							`Waypoint location: lines ${waypointCheck.waypointRange?.start}-${waypointCheck.waypointRange?.end}\n\n` +
+							`Troubleshooting tips:\n` +
+							`• Use get_folder_waypoint() to view the current waypoint content\n` +
+							`• Edit content outside the waypoint block\n` +
+							`• Let the Waypoint plugin regenerate the block automatically\n` +
+							`• If you need to force this edit, the waypoint will need to be regenerated`
+					}],
+					isError: true
+				};
+			}
+
 			await this.app.vault.modify(file, content);
 			return {
 				content: [{ type: "text", text: `Note updated successfully: ${file.path}` }]

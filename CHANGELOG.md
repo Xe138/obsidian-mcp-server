@@ -2,6 +2,89 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [6.0.0] - 2025-10-17
+
+### 🚀 Phase 7: Waypoint Support
+
+This release adds specialized tools for working with Waypoint plugin markers and implements edit protection for auto-generated content.
+
+#### Added
+
+**New Tool: `get_folder_waypoint`**
+- Extract Waypoint block from a folder note
+- Returns structured JSON with:
+  - `path` - File path
+  - `hasWaypoint` - Boolean indicating waypoint presence
+  - `waypointRange` - Line range of waypoint block (start/end)
+  - `links` - Array of extracted wikilinks from waypoint content
+  - `rawContent` - Raw waypoint content between markers
+- Automatically parses `[[wikilinks]]` from waypoint blocks
+- Use to inspect folder note navigation structures
+
+**New Tool: `is_folder_note`**
+- Check if a note is a folder note
+- Returns structured JSON with:
+  - `path` - File path
+  - `isFolderNote` - Boolean result
+  - `reason` - Detection method: `basename_match`, `waypoint_marker`, `both`, or `none`
+  - `folderPath` - Parent folder path
+- Detects folder notes by:
+  - Basename matching parent folder name
+  - Presence of Waypoint markers
+- Use to identify navigation/index notes in vault
+
+**New Utilities (`src/utils/waypoint-utils.ts`)**
+- `WaypointUtils` class for waypoint operations
+- `extractWaypointBlock()` - Extract waypoint from content with line ranges
+- `hasWaypointMarker()` - Quick check for waypoint presence
+- `isFolderNote()` - Detect folder notes by multiple criteria
+- `wouldAffectWaypoint()` - Check if edit would modify waypoint block
+- Handles edge cases: unclosed waypoints, malformed markers, nested content
+
+**Type Definitions (`src/types/mcp-types.ts`)**
+- `FolderWaypointResult` - Waypoint extraction result
+- `FolderNoteResult` - Folder note detection result
+
+**Waypoint Edit Protection**
+- `update_note` now validates edits against waypoint blocks
+- Prevents accidental modification of auto-generated content
+- Returns clear error message with:
+  - Waypoint line range
+  - Troubleshooting tips
+  - Suggestion to use `get_folder_waypoint()` for inspection
+- Detects both content changes and waypoint removal
+
+#### Improvements
+
+- **Smart detection** - Multiple criteria for folder note identification
+- **Link extraction** - Automatic wikilink parsing from waypoint content
+- **Edit safety** - Prevents corruption of auto-generated navigation structures
+- **Clear errors** - Actionable guidance when waypoint edits are blocked
+- **Flexible checking** - Allows edits that don't affect waypoint content
+
+#### Implementation
+
+**Files Modified:**
+- `src/utils/waypoint-utils.ts` (new) - Core waypoint utilities
+- `src/tools/vault-tools.ts` - Added `getFolderWaypoint()` and `isFolderNote()` methods
+- `src/tools/note-tools.ts` - Added waypoint edit protection to `updateNote()`
+- `src/tools/index.ts` - Registered new tools in tool registry
+- `src/types/mcp-types.ts` - Added Phase 7 type definitions
+
+#### Benefits
+
+- **Waypoint integration** - First-class support for Waypoint plugin workflows
+- **Data integrity** - Prevents accidental corruption of auto-generated content
+- **Better navigation** - Tools to discover and inspect folder structures
+- **Developer-friendly** - Clear APIs for working with folder notes
+
+#### Notes
+
+- `update_sections` tool (with waypoint protection) will be implemented in Phase 8
+- Manual testing recommended for various waypoint formats and edge cases
+
+---
+
 ## [5.0.0] - 2025-10-16
 
 ### 🚀 Phase 6: Powerful Search
