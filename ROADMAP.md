@@ -40,22 +40,25 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 
 ## Priority Matrix
 
-| Priority | Category | Estimated Effort |
-|----------|----------|------------------|
-| **P0** | Path Normalization | 1-2 days |
-| **P0** | Error Message Improvements | 1 day |
-| **P0** | Enhanced Authentication | 2-3 days |
-| **P1** | API Unification | 2-3 days |
-| **P1** | Typed Results | 1-2 days |
-| **P1** | Discovery Endpoints | 2-3 days |
-| **P1** | Write Operations & Concurrency | 5-6 days |
-| **P2** | List Ergonomics | 3-4 days |
-| **P2** | Enhanced Search | 4-5 days |
-| **P2** | Linking & Backlinks | 3-4 days |
-| **P3** | Advanced Read Operations | 2-3 days |
-| **P3** | Waypoint Support | 3-4 days |
+| Priority | Category | Estimated Effort | Status |
+|----------|----------|------------------|--------|
+| **P0** | Path Normalization | 1-2 days | ✅ Complete |
+| **P0** | Error Message Improvements | 1 day | ✅ Complete |
+| **P0** | Enhanced Parent Folder Detection | 0.5 days | 📋 Proposed |
+| **P0** | Enhanced Authentication | 2-3 days | ⏳ Pending |
+| **P1** | API Unification | 2-3 days | ⏳ Pending |
+| **P1** | Typed Results | 1-2 days | ⏳ Pending |
+| **P1** | Discovery Endpoints | 2-3 days | ⏳ Pending |
+| **P1** | Write Operations & Concurrency | 5-6 days | ⏳ Pending |
+| **P2** | List Ergonomics | 3-4 days | ⏳ Pending |
+| **P2** | Enhanced Search | 4-5 days | ⏳ Pending |
+| **P2** | Linking & Backlinks | 3-4 days | ⏳ Pending |
+| **P3** | Advanced Read Operations | 2-3 days | ⏳ Pending |
+| **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
 
-**Total Estimated Effort:** 29-42 days
+**Total Estimated Effort:** 29.5-42.5 days  
+**Completed:** 2-3 days (Phase 1.1)  
+**Remaining:** 27.5-39.5 days
 
 ---
 
@@ -75,31 +78,31 @@ Ensure consistent path handling across Windows, macOS, and Linux, with clear err
 
 **File:** `path-utils.ts` (new)
 
-- [ ] Create utility module for path operations
-- [ ] Implement `normalizePath(path: string): string`
+- [x] Create utility module for path operations
+- [x] Implement `normalizePath(path: string): string`
   - Strip leading/trailing slashes
   - Convert backslashes to forward slashes
   - Handle Windows drive letters
   - Normalize case on Windows (case-insensitive)
   - Preserve case on macOS/Linux (case-sensitive)
-- [ ] Implement `isValidVaultPath(path: string): boolean`
-- [ ] Implement `resolveVaultPath(app: App, path: string): TFile | TFolder | null`
-- [ ] Add unit tests for path normalization
+- [x] Implement `isValidVaultPath(path: string): boolean`
+- [x] Implement `resolveVaultPath(app: App, path: string): TFile | TFolder | null`
+- [x] Add unit tests for path normalization
 
 #### 1.2 Update All Tool Implementations
 
-- [ ] Replace direct `getAbstractFileByPath` calls with `PathUtils.resolveFile/Folder`
-- [ ] Update `readNote`, `createNote`, `updateNote`, `deleteNote`, `listNotes`
-- [ ] Add path normalization to all endpoints
+- [x] Replace direct `getAbstractFileByPath` calls with `PathUtils.resolveFile/Folder`
+- [x] Update `readNote`, `createNote`, `updateNote`, `deleteNote`, `listNotes`
+- [x] Add path normalization to all endpoints
 
 #### 1.3 Enhanced Error Messages
 
 **File:** `error-messages.ts` (new)
 
-- [ ] Create error message templates with helpful guidance
-- [ ] Include suggested next actions
-- [ ] Add links to documentation examples
-- [ ] Implement `fileNotFound()`, `folderNotFound()`, `invalidPath()` helpers
+- [x] Create error message templates with helpful guidance
+- [x] Include suggested next actions
+- [x] Add links to documentation examples
+- [x] Implement `fileNotFound()`, `folderNotFound()`, `invalidPath()` helpers
 
 **Example Error Format:**
 ```
@@ -114,11 +117,133 @@ Troubleshooting tips:
 
 #### 1.4 Testing
 
-- [ ] Test with Windows paths (backslashes, drive letters)
-- [ ] Test with macOS paths (case-sensitive)
-- [ ] Test with Linux paths
-- [ ] Test trailing slash handling
-- [ ] Test error message clarity
+- [x] Test with Windows paths (backslashes, drive letters)
+- [x] Test with macOS paths (case-sensitive)
+- [x] Test with Linux paths
+- [x] Test trailing slash handling
+- [x] Test error message clarity
+
+**Note:** Test files have been created in `tests/` directory. To run tests, Jest needs to be set up (see `tests/README.md`).
+
+#### 1.5 Enhanced Parent Folder Detection
+
+**Priority:** P0  
+**Status:** Partially Implemented (v1.1.0), Enhancement Proposed  
+**Estimated Effort:** 0.5 days
+
+**Goal:** Improve parent folder validation in `createNote()` with explicit detection before write operations.
+
+**Current Status (v1.1.0):**
+- ✅ Basic parent folder error detection (catches Obsidian's error)
+- ✅ Enhanced error message with troubleshooting tips
+- ✅ `ErrorMessages.parentFolderNotFound()` implemented
+- ❌ Detection happens during write (not before)
+- ❌ No `createParents` parameter option
+
+**Tasks:**
+
+- [ ] Add explicit parent folder detection in `createNote()`
+  - Compute parent path using `PathUtils.getParentPath(path)` before write
+  - Check if parent exists using `PathUtils.folderExists(app, parentPath)`
+  - Check if parent is actually a folder (not a file)
+  - Return clear error before attempting file creation
+
+- [ ] Enhance `ErrorMessages.parentFolderNotFound()`
+  - Ensure consistent error message template
+  - Include parent path in error message
+  - Provide actionable troubleshooting steps
+  - Suggest using `list_notes()` to verify parent structure
+
+- [ ] Optional: Add `createParents` parameter
+  - Add optional `createParents?: boolean` parameter to `create_note` tool
+  - Default to `false` (no auto-creation)
+  - If `true`, recursively create parent folders before file creation
+  - Document behavior clearly in tool description
+  - Add tests for both modes
+
+- [ ] Update tool schema
+  - Add `createParents` parameter to `create_note` inputSchema
+  - Document default behavior (no auto-creation)
+  - Update tool description to mention parent folder requirement
+  - Add examples with and without `createParents`
+
+- [ ] Testing
+  - Test parent folder detection with missing parent
+  - Test parent folder detection when parent is a file
+  - Test with nested missing parents (a/b/c where b doesn't exist)
+  - Test `createParents: true` creates all missing parents
+  - Test `createParents: false` returns error for missing parents
+  - Test error message clarity and consistency
+
+**Implementation Notes:**
+
+```typescript
+// Pseudo-code for enhanced createNote()
+async createNote(path: string, content: string, createParents = false) {
+  // Validate path
+  if (!PathUtils.isValidVaultPath(path)) {
+    return ErrorMessages.invalidPath(path);
+  }
+
+  // Normalize path
+  const normalizedPath = PathUtils.normalizePath(path);
+
+  // Check if file already exists
+  if (PathUtils.fileExists(this.app, normalizedPath)) {
+    return ErrorMessages.pathAlreadyExists(normalizedPath, 'file');
+  }
+
+  // Explicit parent folder detection
+  const parentPath = PathUtils.getParentPath(normalizedPath);
+  if (parentPath) {
+    // Check if parent exists
+    if (!PathUtils.pathExists(this.app, parentPath)) {
+      if (createParents) {
+        // Auto-create parent folders
+        await this.createParentFolders(parentPath);
+      } else {
+        return ErrorMessages.parentFolderNotFound(normalizedPath, parentPath);
+      }
+    }
+    
+    // Check if parent is actually a folder (not a file)
+    if (PathUtils.fileExists(this.app, parentPath)) {
+      return ErrorMessages.notAFolder(parentPath);
+    }
+  }
+
+  // Proceed with file creation
+  try {
+    const file = await this.app.vault.create(normalizedPath, content);
+    return { success: true, path: file.path };
+  } catch (error) {
+    return ErrorMessages.operationFailed('create note', normalizedPath, error.message);
+  }
+}
+```
+
+**Error Message Template:**
+
+```
+Parent folder does not exist: "mcp-plugin-test/missing-parent"
+
+Cannot create "mcp-plugin-test/missing-parent/file.md" because its parent folder is missing.
+
+Troubleshooting tips:
+• Create the parent folder first using Obsidian
+• Verify the folder path with list_notes("mcp-plugin-test")
+• Check that the parent folder path is correct (vault-relative, case-sensitive on macOS/Linux)
+• Note: Automatic parent folder creation is not currently enabled
+• Consider using createParents: true parameter to auto-create folders
+```
+
+**Benefits:**
+
+- ✅ Explicit detection before write operation (fail fast)
+- ✅ Clear error message with exact missing parent path
+- ✅ Consistent error messaging across all tools
+- ✅ Optional auto-creation for convenience
+- ✅ Better user experience with actionable guidance
 
 ---
 

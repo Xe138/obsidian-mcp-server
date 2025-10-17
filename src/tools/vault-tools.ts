@@ -1,5 +1,7 @@
 import { App, TFile, TFolder } from 'obsidian';
 import { CallToolResult } from '../types/mcp-types';
+import { PathUtils } from '../utils/path-utils';
+import { ErrorMessages } from '../utils/error-messages';
 
 export class VaultTools {
 	constructor(private app: App) {}
@@ -49,16 +51,38 @@ export class VaultTools {
 		let files: TFile[];
 
 		if (folder) {
-			const folderObj = this.app.vault.getAbstractFileByPath(folder);
-			if (!folderObj || !(folderObj instanceof TFolder)) {
+			// Validate path
+			if (!PathUtils.isValidVaultPath(folder)) {
 				return {
-					content: [{ type: "text", text: `Folder not found: ${folder}` }],
+					content: [{ type: "text", text: ErrorMessages.invalidPath(folder) }],
 					isError: true
 				};
 			}
+
+			// Normalize the folder path
+			const normalizedFolder = PathUtils.normalizePath(folder);
+
+			// Check if folder exists
+			const folderObj = PathUtils.resolveFolder(this.app, normalizedFolder);
+			if (!folderObj) {
+				// Check if it's a file instead
+				if (PathUtils.fileExists(this.app, normalizedFolder)) {
+					return {
+						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedFolder) }],
+						isError: true
+					};
+				}
+				
+				return {
+					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedFolder) }],
+					isError: true
+				};
+			}
+
+			// Get files in the folder
 			files = [];
 			this.app.vault.getMarkdownFiles().forEach((file: TFile) => {
-				if (file.path.startsWith(folder + '/')) {
+				if (file.path.startsWith(normalizedFolder + '/') || file.path === normalizedFolder) {
 					files.push(file);
 				}
 			});

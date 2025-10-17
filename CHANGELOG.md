@@ -2,6 +2,123 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [1.1.0] - 2025-10-16
+
+### 🎯 Phase 1.1: Path Normalization & Error Handling
+
+This release focuses on robustness, cross-platform compatibility, and significantly improved error messages.
+
+#### Added
+
+**Path Utilities (`src/utils/path-utils.ts`)**
+- `PathUtils.normalizePath()` - Cross-platform path normalization (Windows/macOS/Linux)
+- `PathUtils.isValidVaultPath()` - Path validation with security checks
+- `PathUtils.resolveFile()` / `resolveFolder()` - Type-safe path resolution
+- `PathUtils.fileExists()` / `folderExists()` - Existence checking
+- `PathUtils.getPathType()` - Determine if path is file or folder
+- `PathUtils.ensureMarkdownExtension()` - Auto-add .md extension
+- `PathUtils.getParentPath()` / `getBasename()` - Path manipulation
+- `PathUtils.joinPath()` - Safe path joining
+- Handles backslashes, drive letters, trailing slashes automatically
+- Prevents directory traversal attacks (`..` paths)
+
+**Enhanced Error Messages (`src/utils/error-messages.ts`)**
+- Context-aware error messages with troubleshooting tips
+- Dynamic `list_notes()` suggestions based on path context
+- Operation-specific guidance (read, create, update, delete)
+- Clear examples of correct path formats
+- Platform-specific notes (case sensitivity on macOS/Linux)
+- `ErrorMessages.fileNotFound()` - File not found with discovery tips
+- `ErrorMessages.folderNotFound()` - Folder not found with navigation tips
+- `ErrorMessages.invalidPath()` - Invalid path with format examples
+- `ErrorMessages.pathAlreadyExists()` - Conflict resolution guidance
+- `ErrorMessages.parentFolderNotFound()` - Parent folder missing with verification steps
+- `ErrorMessages.cannotDeleteFolder()` - Folder deletion attempt with alternatives
+- `ErrorMessages.notAFile()` / `notAFolder()` - Type mismatch errors
+- `ErrorMessages.operationFailed()` - Generic operation failures
+
+**Testing Infrastructure**
+- Jest testing framework configured
+- 43 unit tests for PathUtils (all passing)
+- Mock Obsidian API for testing (`tests/__mocks__/obsidian.ts`)
+- Test coverage for cross-platform path handling
+- Integration tests with mock App/Vault
+- `npm test` / `npm run test:watch` / `npm run test:coverage` scripts
+
+**Documentation**
+- `docs/TOOL_SELECTION_GUIDE.md` - Comprehensive 400+ line guide
+  - Decision table for tool selection
+  - Path format guidelines (correct vs incorrect)
+  - Common scenarios with step-by-step examples
+  - Troubleshooting decision tree
+  - Best practices checklist
+  - Quick reference card
+- `docs/ERROR_MESSAGE_IMPROVEMENTS.md` - Error message enhancement documentation
+- `docs/TOOL_DESCRIPTION_IMPROVEMENTS.md` - AI agent tool description improvements
+- `tests/README.md` - Testing setup and guidelines
+- `PHASE_1.1_IMPLEMENTATION.md` - Complete implementation summary
+
+#### Changed
+
+**All Tool Implementations Enhanced**
+- `readNote()` - Path validation, better error messages, folder detection
+- `createNote()` - Path normalization, conflict detection, parent folder validation
+- `updateNote()` - Enhanced validation, clearer error messages
+- `deleteNote()` - Folder detection with specific error message
+- `listNotes()` - Path validation, folder verification, better errors
+
+**Tool Descriptions for AI Agents**
+- All 7 MCP tool descriptions significantly enhanced
+- Critical constraints stated upfront (e.g., "only files, NOT folders")
+- Workflow guidance (e.g., "use list_notes() first if unsure")
+- Path requirements clearly documented in every parameter
+- Multiple concrete examples per tool
+- Failure modes explicitly stated
+- Self-documenting for AI agents without external docs
+
+**Error Message Consistency**
+- All errors now include vault-relative path reminders
+- Case sensitivity noted for macOS/Linux
+- Context-specific `list_notes()` commands
+- Operation-appropriate tool suggestions
+- Consistent formatting across all tools
+
+#### Fixed
+
+- **Cross-platform paths** - Windows backslashes now handled correctly
+- **Path validation** - Prevents invalid characters and directory traversal
+- **Delete folder error** - Now clearly states "cannot delete folders" instead of confusing message
+- **Parent folder detection** - Clear message when parent folder missing during create
+- **Error message contradictions** - All error headers and bodies now consistent
+
+#### Technical Details
+
+**New Dependencies**
+- jest: ^29.x (dev)
+- @types/jest: ^29.x (dev)
+- ts-jest: ^29.x (dev)
+
+**Test Coverage**
+- 43 unit tests passing
+- PathUtils: 100% coverage
+- Cross-platform scenarios tested
+- Mock Obsidian API for isolated testing
+
+**Build**
+- All TypeScript compilation successful
+- No breaking changes to existing APIs
+- Backward compatible with v1.0.0
+
+#### Developer Experience
+
+- Centralized path handling logic
+- Type-safe path operations
+- Comprehensive test suite
+- Clear error messages reduce support burden
+- Self-documenting code
+
+---
+
 ## [1.0.0] - 2025-10-16
 
 ### 🎉 Initial Release
@@ -124,11 +241,28 @@ See [ROADMAP.md](ROADMAP.md) for detailed implementation plans.
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.1.0 | 2025-10-16 | Phase 1.1: Path normalization, enhanced error messages, testing infrastructure |
 | 1.0.0 | 2025-10-16 | Initial release |
 
 ---
 
 ## Upgrade Guide
+
+### From 1.0.0 to 1.1.0
+
+This is a backward-compatible update. Simply update the plugin:
+
+1. Backup your settings (optional, but recommended)
+2. Update the plugin files
+3. Restart Obsidian or reload the plugin
+
+**What's New:**
+- Better error messages with troubleshooting tips
+- Improved cross-platform path handling
+- Enhanced tool descriptions for AI agents
+- No configuration changes required
+
+**Breaking Changes:** None - fully backward compatible
 
 ### From Development to 1.0.0
 

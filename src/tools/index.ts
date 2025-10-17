@@ -16,13 +16,13 @@ export class ToolRegistry {
 		return [
 			{
 				name: "read_note",
-				description: "Read the content of a note from the Obsidian vault",
+				description: "Read the content of a file from the Obsidian vault. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list_notes() first if you're unsure of the exact path. This only works on files, not folders.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Path to the note within the vault (e.g., 'folder/note.md')"
+							description: "Vault-relative path to the file (e.g., 'folder/note.md' or 'daily/2024-10-16.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
 						}
 					},
 					required: ["path"]
@@ -30,17 +30,17 @@ export class ToolRegistry {
 			},
 			{
 				name: "create_note",
-				description: "Create a new note in the Obsidian vault",
+				description: "Create a new file in the Obsidian vault. Use this to create a new note or file. The parent folder must already exist - this will NOT auto-create folders. Path must be vault-relative with file extension. Will fail if the file already exists. Use list_notes() to verify the parent folder exists before creating.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Path for the new note (e.g., 'folder/note.md')"
+							description: "Vault-relative path for the new file (e.g., 'folder/note.md' or 'projects/2024/report.md'). Must include file extension. Parent folders must exist. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
 						},
 						content: {
 							type: "string",
-							description: "Content of the note"
+							description: "The complete content to write to the new file. Can include markdown formatting, frontmatter, etc."
 						}
 					},
 					required: ["path", "content"]
@@ -48,17 +48,17 @@ export class ToolRegistry {
 			},
 			{
 				name: "update_note",
-				description: "Update an existing note in the Obsidian vault",
+				description: "Update (overwrite) an existing file in the Obsidian vault. Use this to modify the contents of an existing note. This REPLACES the entire file content. The file must already exist. Path must be vault-relative with file extension. Use read_note() first to get current content if you want to make partial changes.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Path to the note to update"
+							description: "Vault-relative path to the existing file (e.g., 'folder/note.md'). Must include file extension. File must exist. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
 						},
 						content: {
 							type: "string",
-							description: "New content for the note"
+							description: "The complete new content that will replace the entire file. To make partial changes, read the file first, modify the content, then update."
 						}
 					},
 					required: ["path", "content"]
@@ -66,13 +66,13 @@ export class ToolRegistry {
 			},
 			{
 				name: "delete_note",
-				description: "Delete a note from the Obsidian vault",
+				description: "Delete a file from the Obsidian vault. Use this to permanently remove a file. This only works on files, NOT folders. The file must exist. Path must be vault-relative with file extension. This operation cannot be undone through the API.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Path to the note to delete"
+							description: "Vault-relative path to the file to delete (e.g., 'folder/note.md'). Must be a file, not a folder. Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
 						}
 					},
 					required: ["path"]
@@ -80,13 +80,13 @@ export class ToolRegistry {
 			},
 			{
 				name: "search_notes",
-				description: "Search for notes in the Obsidian vault",
+				description: "Search for notes in the Obsidian vault by content or filename. Use this to find notes containing specific text or with specific names. Searches are case-insensitive and match against both file names and file contents. Returns a list of matching file paths.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						query: {
 							type: "string",
-							description: "Search query string"
+							description: "Text to search for in note names and contents (e.g., 'TODO', 'meeting notes', 'project'). Search is case-insensitive."
 						}
 					},
 					required: ["query"]
@@ -94,7 +94,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "get_vault_info",
-				description: "Get information about the Obsidian vault",
+				description: "Get information about the Obsidian vault including vault name, total file count, markdown file count, and root path. Use this to understand the vault structure and get an overview of available content. No parameters required.",
 				inputSchema: {
 					type: "object",
 					properties: {}
@@ -102,13 +102,13 @@ export class ToolRegistry {
 			},
 			{
 				name: "list_notes",
-				description: "List all notes in the vault or in a specific folder",
+				description: "List markdown files in the vault or in a specific folder. Use this to explore vault structure, verify paths exist, or see what files are available. Call without arguments to list all files in the vault, or provide a folder path to list files in that folder. This is essential for discovering what files exist before reading, updating, or deleting them.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						folder: {
 							type: "string",
-							description: "Optional folder path to list notes from"
+							description: "Optional vault-relative folder path to list files from (e.g., 'projects' or 'daily/2024'). Omit to list all files in vault. Do not use leading or trailing slashes. Paths are case-sensitive on macOS/Linux."
 						}
 					}
 				}
