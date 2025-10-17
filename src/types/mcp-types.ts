@@ -102,10 +102,26 @@ export interface SearchMatch {
 
 export interface SearchResult {
 	query: string;
+	isRegex: boolean;
 	matches: SearchMatch[];
 	totalMatches: number;
 	filesSearched: number;
 	filesWithMatches: number;
+}
+
+// Phase 6: Waypoint Search Types
+export interface WaypointResult {
+	path: string;
+	line: number;
+	waypointRange: { start: number; end: number };
+	content: string;
+	links: string[];
+}
+
+export interface WaypointSearchResult {
+	waypoints: WaypointResult[];
+	totalWaypoints: number;
+	filesSearched: number;
 }
 
 // Phase 3: Discovery Endpoint Types

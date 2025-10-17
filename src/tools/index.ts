@@ -95,17 +95,64 @@ export class ToolRegistry {
 				}
 			},
 			{
-				name: "search_notes",
-				description: "Search for notes in the Obsidian vault by content or filename. Returns structured JSON with detailed search results including file paths, line numbers, column positions, snippets with context, and match ranges for highlighting. Searches are case-insensitive and match against both file names and file contents. Use this to find notes containing specific text or with specific names.",
+				name: "search",
+				description: "Search vault with advanced filtering, regex support, and snippet extraction. Returns structured JSON with detailed search results including file paths, line numbers, column positions, snippets with context, and match ranges for highlighting. Supports both literal and regex search patterns, case sensitivity control, glob filtering, folder scoping, and result limiting. Use this for powerful content search across your vault.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						query: {
 							type: "string",
-							description: "Text to search for in note names and contents (e.g., 'TODO', 'meeting notes', 'project'). Search is case-insensitive."
+							description: "Text or regex pattern to search for (e.g., 'TODO', 'meeting.*notes', '^# Heading'). Interpretation depends on isRegex parameter."
+						},
+						isRegex: {
+							type: "boolean",
+							description: "If true, treat query as a regular expression pattern. If false (default), treat as literal text. Regex supports full JavaScript regex syntax."
+						},
+						caseSensitive: {
+							type: "boolean",
+							description: "If true, search is case-sensitive. If false (default), search is case-insensitive. Applies to both literal and regex searches."
+						},
+						includes: {
+							type: "array",
+							items: { type: "string" },
+							description: "Glob patterns to include (e.g., ['*.md', 'projects/**']). Only files matching these patterns will be searched. If empty, all files are included."
+						},
+						excludes: {
+							type: "array",
+							items: { type: "string" },
+							description: "Glob patterns to exclude (e.g., ['.obsidian/**', '*.tmp']). Files matching these patterns will be skipped. Takes precedence over includes."
+						},
+						folder: {
+							type: "string",
+							description: "Optional vault-relative folder path to limit search scope (e.g., 'projects' or 'daily/2024'). Only files within this folder will be searched."
+						},
+						returnSnippets: {
+							type: "boolean",
+							description: "If true (default), include surrounding context snippets for each match. If false, only return match locations without snippets."
+						},
+						snippetLength: {
+							type: "number",
+							description: "Maximum length of context snippets in characters. Default: 100. Only applies when returnSnippets is true."
+						},
+						maxResults: {
+							type: "number",
+							description: "Maximum number of matches to return. Default: 100. Use to limit results for broad searches."
 						}
 					},
 					required: ["query"]
+				}
+			},
+			{
+				name: "search_waypoints",
+				description: "Find all Waypoint plugin markers in the vault. Waypoints are special comment blocks (%% Begin Waypoint %% ... %% End Waypoint %%) used by the Waypoint plugin to auto-generate folder indexes. Returns structured JSON with waypoint locations, content, and extracted wikilinks. Useful for discovering folder notes and navigation structures.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						folder: {
+							type: "string",
+							description: "Optional vault-relative folder path to limit search scope (e.g., 'projects'). If omitted, searches entire vault."
+						}
+					}
 				}
 			},
 			{
@@ -228,8 +275,20 @@ export class ToolRegistry {
 					return await this.noteTools.updateNote(args.path, args.content);
 				case "delete_note":
 					return await this.noteTools.deleteNote(args.path);
-				case "search_notes":
-					return await this.vaultTools.searchNotes(args.query);
+				case "search":
+					return await this.vaultTools.search({
+						query: args.query,
+						isRegex: args.isRegex,
+						caseSensitive: args.caseSensitive,
+						includes: args.includes,
+						excludes: args.excludes,
+						folder: args.folder,
+						returnSnippets: args.returnSnippets,
+						snippetLength: args.snippetLength,
+						maxResults: args.maxResults
+					});
+				case "search_waypoints":
+					return await this.vaultTools.searchWaypoints(args.folder);
 				case "get_vault_info":
 					return await this.vaultTools.getVaultInfo();
 				case "list":

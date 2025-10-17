@@ -51,15 +51,15 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P1** | Discovery Endpoints | 2-3 days | ✅ Complete |
 | **P1** | Write Operations & Concurrency | 5-6 days | ⏳ Pending |
 | **P2** | Enhanced List Operations | 3-4 days | ✅ Complete |
-| **P2** | Enhanced Search | 4-5 days | ⏳ Pending |
+| **P2** | Enhanced Search | 4-5 days | ✅ Complete |
 | **P2** | Linking & Backlinks | 3-4 days | ⏳ Pending |
 | **P3** | Advanced Read Operations | 2-3 days | ✅ Complete |
 | **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
 | **P3** | UI Notifications | 1-2 days | ⏳ Pending |
 
 **Total Estimated Effort:** 30.5-44.5 days  
-**Completed:** 12.5-18.5 days (Phase 1, Phase 2, Phase 3, Phase 4, Phase 5)  
-**Remaining:** 18-26 days
+**Completed:** 16.5-23.5 days (Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6)  
+**Remaining:** 14-21 days
 
 ---
 
@@ -672,7 +672,8 @@ Add options for reading notes with frontmatter parsing and specialized file type
 
 **Priority:** P2  
 **Dependencies:** Phase 2  
-**Estimated Effort:** 4-5 days
+**Estimated Effort:** 4-5 days  
+**Status:** ✅ Complete
 
 ### Goals
 
@@ -681,6 +682,15 @@ Implement regex search, snippet extraction, and specialized search helpers.
 ### Tasks
 
 #### 6.1 Enhanced `search` Tool
+
+- [x] Add enhanced search tool with advanced filtering
+- [x] Support regex and literal search modes
+- [x] Add case sensitivity control
+- [x] Support glob filtering (includes/excludes)
+- [x] Add folder scoping
+- [x] Implement snippet extraction with configurable length
+- [x] Add result limiting (maxResults parameter)
+- [x] Remove old search_notes tool (breaking change)
 
 **Tool Schema:**
 ```typescript
@@ -709,11 +719,14 @@ Implement regex search, snippet extraction, and specialized search helpers.
 
 **File:** `search-utils.ts` (new)
 
-- [ ] Implement regex and literal search
-- [ ] Extract surrounding context snippets
-- [ ] Calculate match ranges for highlighting
-- [ ] Support glob filtering
-- [ ] Limit results and track statistics
+- [x] Implement regex and literal search
+- [x] Extract surrounding context snippets
+- [x] Calculate match ranges for highlighting
+- [x] Support glob filtering
+- [x] Limit results and track statistics
+- [x] Handle zero-width regex matches
+- [x] Search in both file content and filenames
+- [x] Proper error handling for invalid regex patterns
 
 **Result Format:**
 ```typescript
@@ -731,9 +744,12 @@ Implement regex search, snippet extraction, and specialized search helpers.
 
 **Tool:** `search_waypoints`
 
-- [ ] Add specialized tool for finding Waypoint markers
-- [ ] Search for `%% Begin Waypoint %%` ... `%% End Waypoint %%`
-- [ ] Return locations and parsed content
+- [x] Add specialized tool for finding Waypoint markers
+- [x] Search for `%% Begin Waypoint %%` ... `%% End Waypoint %%`
+- [x] Return locations and parsed content
+- [x] Extract wikilinks from waypoint content
+- [x] Support folder scoping
+- [x] Return structured WaypointSearchResult with statistics
 
 **Schema:**
 ```typescript
@@ -751,12 +767,23 @@ Implement regex search, snippet extraction, and specialized search helpers.
 
 #### 6.4 Testing
 
+- [x] Implementation complete, ready for manual testing
 - [ ] Test literal vs regex search
 - [ ] Test case sensitivity
 - [ ] Test snippet extraction
 - [ ] Test glob filtering
 - [ ] Test waypoint search
 - [ ] Performance test with large files
+
+**Implementation Notes:**
+
+- Enhanced search tool (`search`) replaces basic `search_notes` with full regex support
+- **Breaking change:** `search_notes` tool completely removed (no backward compatibility)
+- Search supports JavaScript regex syntax with global flag for multiple matches per line
+- Snippet extraction centers matches with configurable length
+- Glob filtering uses existing GlobUtils for consistency
+- Waypoint search extracts wikilinks using regex pattern matching
+- All search results return structured JSON with detailed metadata
 
 ---
 

@@ -1,88 +1,12 @@
 import { App, TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { GlobUtils } from '../utils/glob-utils';
+import { SearchUtils } from '../utils/search-utils';
 
 export class VaultTools {
 	constructor(private app: App) {}
-
-	async searchNotes(query: string): Promise<CallToolResult> {
-		const files = this.app.vault.getMarkdownFiles();
-		const matches: SearchMatch[] = [];
-		let filesSearched = 0;
-		const filesWithMatches = new Set<string>();
-
-		const queryLower = query.toLowerCase();
-
-		for (const file of files) {
-			filesSearched++;
-			const content = await this.app.vault.read(file);
-			const lines = content.split('\n');
-
-			// Search in content
-			for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-				const line = lines[lineIndex];
-				const lineLower = line.toLowerCase();
-				let columnIndex = lineLower.indexOf(queryLower);
-
-				while (columnIndex !== -1) {
-					filesWithMatches.add(file.path);
-					
-					// Extract snippet (50 chars before and after match)
-					const snippetStart = Math.max(0, columnIndex - 50);
-					const snippetEnd = Math.min(line.length, columnIndex + query.length + 50);
-					const snippet = line.substring(snippetStart, snippetEnd);
-					
-					matches.push({
-						path: file.path,
-						line: lineIndex + 1, // 1-indexed
-						column: columnIndex + 1, // 1-indexed
-						snippet: snippet,
-						matchRanges: [{
-							start: columnIndex - snippetStart,
-							end: columnIndex - snippetStart + query.length
-						}]
-					});
-
-					// Find next occurrence in the same line
-					columnIndex = lineLower.indexOf(queryLower, columnIndex + 1);
-				}
-			}
-
-			// Also check filename
-			if (file.basename.toLowerCase().includes(queryLower)) {
-				filesWithMatches.add(file.path);
-				// Add a match for the filename itself
-				const nameIndex = file.basename.toLowerCase().indexOf(queryLower);
-				matches.push({
-					path: file.path,
-					line: 0, // 0 indicates filename match
-					column: nameIndex + 1,
-					snippet: file.basename,
-					matchRanges: [{
-						start: nameIndex,
-						end: nameIndex + query.length
-					}]
-				});
-			}
-		}
-
-		const result: SearchResult = {
-			query: query,
-			matches: matches,
-			totalMatches: matches.length,
-			filesSearched: filesSearched,
-			filesWithMatches: filesWithMatches.size
-		};
-
-		return {
-			content: [{
-				type: "text",
-				text: JSON.stringify(result, null, 2)
-			}]
-		};
-	}
 
 	async getVaultInfo(): Promise<CallToolResult> {
 		const files = this.app.vault.getFiles();
@@ -577,5 +501,99 @@ export class VaultTools {
 				text: JSON.stringify(result, null, 2)
 			}]
 		};
+	}
+
+	// Phase 6: Powerful Search
+	async search(options: {
+		query: string;
+		isRegex?: boolean;
+		caseSensitive?: boolean;
+		includes?: string[];
+		excludes?: string[];
+		folder?: string;
+		returnSnippets?: boolean;
+		snippetLength?: number;
+		maxResults?: number;
+	}): Promise<CallToolResult> {
+		const {
+			query,
+			isRegex = false,
+			caseSensitive = false,
+			includes,
+			excludes,
+			folder,
+			returnSnippets = true,
+			snippetLength = 100,
+			maxResults = 100
+		} = options;
+
+		try {
+			const { matches, stats } = await SearchUtils.search(this.app, {
+				query,
+				isRegex,
+				caseSensitive,
+				includes,
+				excludes,
+				folder,
+				returnSnippets,
+				snippetLength,
+				maxResults
+			});
+
+			const result: SearchResult = {
+				query,
+				isRegex,
+				matches,
+				totalMatches: stats.totalMatches,
+				filesSearched: stats.filesSearched,
+				filesWithMatches: stats.filesWithMatches
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Search error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	async searchWaypoints(folder?: string): Promise<CallToolResult> {
+		try {
+			const waypoints = await SearchUtils.searchWaypoints(this.app, folder);
+
+			const result: WaypointSearchResult = {
+				waypoints,
+				totalWaypoints: waypoints.length,
+				filesSearched: this.app.vault.getMarkdownFiles().filter(file => {
+					if (!folder) return true;
+					const folderPath = folder.endsWith('/') ? folder : folder + '/';
+					return file.path.startsWith(folderPath) || file.path === folder;
+				}).length
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Waypoint search error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
 	}
 }

@@ -2,6 +2,92 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [5.0.0] - 2025-10-16
+
+### 🚀 Phase 6: Powerful Search
+
+This release introduces a completely redesigned search system with regex support, advanced filtering, and specialized waypoint search capabilities.
+
+#### Added
+
+**New Tool: `search`**
+- **Regex support** - Full JavaScript regex pattern matching with `isRegex` parameter
+- **Case sensitivity control** - Toggle case-sensitive search with `caseSensitive` parameter
+- **Advanced filtering**:
+  - `includes` - Glob patterns to include specific files (e.g., `['*.md', 'projects/**']`)
+  - `excludes` - Glob patterns to exclude files (e.g., `['.obsidian/**', '*.tmp']`)
+  - `folder` - Limit search to specific folder path
+- **Snippet extraction** - Configurable context snippets with `snippetLength` parameter
+- **Result limiting** - Control maximum results with `maxResults` parameter (default: 100)
+- **Snippet control** - Toggle snippet extraction with `returnSnippets` parameter
+- Returns enhanced `SearchResult` with:
+  - `query` - Search query string
+  - `isRegex` - Boolean indicating regex mode
+  - `matches` - Array of `SearchMatch` objects with line, column, snippet, and match ranges
+  - `totalMatches` - Total number of matches found
+  - `filesSearched` - Number of files searched
+  - `filesWithMatches` - Number of files containing matches
+
+**New Tool: `search_waypoints`**
+- Specialized tool for finding Waypoint plugin markers
+- Searches for `%% Begin Waypoint %%` ... `%% End Waypoint %%` blocks
+- **Wikilink extraction** - Automatically extracts `[[wikilinks]]` from waypoint content
+- **Folder scoping** - Optional `folder` parameter to limit search scope
+- Returns structured `WaypointSearchResult` with:
+  - `waypoints` - Array of waypoint locations with content and links
+  - `totalWaypoints` - Total number of waypoints found
+  - `filesSearched` - Number of files searched
+
+**New Utilities (`src/utils/search-utils.ts`)**
+- `SearchUtils` class for advanced search operations
+- `search()` - Main search method with regex, filtering, and snippet extraction
+- `searchInFile()` - Search within single file with match highlighting
+- `searchInFilename()` - Search in file basenames
+- `searchWaypoints()` - Specialized waypoint marker search
+- Handles edge cases: zero-width regex matches, invalid patterns, large files
+
+**Type Definitions (`src/types/mcp-types.ts`)**
+- Updated `SearchResult` - Added `isRegex` field
+- `WaypointResult` - Individual waypoint location with content and links
+- `WaypointSearchResult` - Waypoint search results with statistics
+
+**Implementation (`src/tools/vault-tools.ts`)**
+- New `search()` method with full parameter support
+- New `searchWaypoints()` method for waypoint discovery
+- Updated `searchNotes()` to include `isRegex: false` in results
+
+**Tool Registry (`src/tools/index.ts`)**
+- Registered `search` tool with comprehensive schema
+- Registered `search_waypoints` tool
+- Marked `search_notes` as DEPRECATED (kept for backward compatibility)
+- Updated callTool to handle new search tools
+
+#### Improvements
+
+- **Regex power** - Full JavaScript regex syntax support with global flag for multiple matches per line
+- **Smart snippet extraction** - Centers matches in snippets with configurable length
+- **Consistent filtering** - Uses existing GlobUtils for glob pattern matching
+- **Filename search** - Searches both content and filenames automatically
+- **Error handling** - Clear error messages for invalid regex patterns
+- **Performance** - Efficient search with early termination when maxResults reached
+
+#### Breaking Changes
+
+- **`search_notes` tool removed** - Replaced by enhanced `search` tool
+  - Old tool completely removed (no backward compatibility)
+  - Use `search` tool with `isRegex: false` for equivalent literal search
+  - Migration: Replace `search_notes` calls with `search` tool
+
+#### Benefits
+
+- **Powerful queries** - Use regex for complex search patterns (e.g., `^# Heading`, `TODO.*urgent`)
+- **Precise control** - Fine-tune search with case sensitivity and glob filtering
+- **Better results** - Context snippets with match highlighting for easier review
+- **Waypoint discovery** - Find all folder notes and navigation structures
+- **Cleaner API** - Single powerful search tool instead of multiple limited ones
+
+---
+
 ## [4.0.0] - 2025-10-16
 
 ### 🚀 Phase 5: Advanced Read Operations
