@@ -28,8 +28,13 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 	}
 
 	// Authentication middleware
-	if (settings.enableAuth && settings.apiKey) {
+	if (settings.enableAuth) {
 		app.use((req: Request, res: Response, next: any) => {
+			// Defensive check: if auth is enabled but no API key is set, reject all requests
+			if (!settings.apiKey || settings.apiKey.trim() === '') {
+				return res.status(500).json(createErrorResponse(null, ErrorCodes.InternalError, 'Server misconfigured: Authentication enabled but no API key set'));
+			}
+			
 			const authHeader = req.headers.authorization;
 			const apiKey = authHeader?.replace('Bearer ', '');
 			

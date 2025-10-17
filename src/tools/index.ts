@@ -30,17 +30,21 @@ export class ToolRegistry {
 			},
 			{
 				name: "create_note",
-				description: "Create a new file in the Obsidian vault. Use this to create a new note or file. The parent folder must already exist - this will NOT auto-create folders. Path must be vault-relative with file extension. Will fail if the file already exists. Use list_notes() to verify the parent folder exists before creating.",
+				description: "Create a new file in the Obsidian vault. Use this to create a new note or file. By default, parent folders must already exist. Set createParents to true to automatically create missing parent folders. Path must be vault-relative with file extension. Will fail if the file already exists. Use list_notes() to verify the parent folder exists before creating.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Vault-relative path for the new file (e.g., 'folder/note.md' or 'projects/2024/report.md'). Must include file extension. Parent folders must exist. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+							description: "Vault-relative path for the new file (e.g., 'folder/note.md' or 'projects/2024/report.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
 						},
 						content: {
 							type: "string",
 							description: "The complete content to write to the new file. Can include markdown formatting, frontmatter, etc."
+						},
+						createParents: {
+							type: "boolean",
+							description: "If true, automatically create missing parent folders. If false (default), returns an error if parent folders don't exist. Default: false"
 						}
 					},
 					required: ["path", "content"]
@@ -122,7 +126,7 @@ export class ToolRegistry {
 				case "read_note":
 					return await this.noteTools.readNote(args.path);
 				case "create_note":
-					return await this.noteTools.createNote(args.path, args.content);
+					return await this.noteTools.createNote(args.path, args.content, args.createParents ?? false);
 				case "update_note":
 					return await this.noteTools.updateNote(args.path, args.content);
 				case "delete_note":

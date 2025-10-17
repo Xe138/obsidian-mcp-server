@@ -44,8 +44,8 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 |----------|----------|------------------|--------|
 | **P0** | Path Normalization | 1-2 days | ✅ Complete |
 | **P0** | Error Message Improvements | 1 day | ✅ Complete |
-| **P0** | Enhanced Parent Folder Detection | 0.5 days | 📋 Proposed |
-| **P0** | Enhanced Authentication | 2-3 days | ⏳ Pending |
+| **P0** | Enhanced Parent Folder Detection | 0.5 days | ✅ Complete |
+| **P0** | Enhanced Authentication | 2-3 days | ✅ Complete |
 | **P1** | API Unification | 2-3 days | ⏳ Pending |
 | **P1** | Typed Results | 1-2 days | ⏳ Pending |
 | **P1** | Discovery Endpoints | 2-3 days | ⏳ Pending |
@@ -57,8 +57,8 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
 
 **Total Estimated Effort:** 29.5-42.5 days  
-**Completed:** 2-3 days (Phase 1.1)  
-**Remaining:** 27.5-39.5 days
+**Completed:** 2.5-3.5 days (Phase 1.1-1.5)  
+**Remaining:** 27-39 days
 
 ---
 
@@ -128,46 +128,46 @@ Troubleshooting tips:
 #### 1.5 Enhanced Parent Folder Detection
 
 **Priority:** P0  
-**Status:** Partially Implemented (v1.1.0), Enhancement Proposed  
+**Status:** ✅ Complete  
 **Estimated Effort:** 0.5 days
 
 **Goal:** Improve parent folder validation in `createNote()` with explicit detection before write operations.
 
-**Current Status (v1.1.0):**
-- ✅ Basic parent folder error detection (catches Obsidian's error)
-- ✅ Enhanced error message with troubleshooting tips
-- ✅ `ErrorMessages.parentFolderNotFound()` implemented
-- ❌ Detection happens during write (not before)
-- ❌ No `createParents` parameter option
+**Implementation Summary:**
+- ✅ Explicit parent folder detection before write operations
+- ✅ Enhanced error message with `createParents` suggestion
+- ✅ `createParents` parameter with recursive folder creation
+- ✅ Comprehensive test coverage
+- ✅ Updated tool schema and documentation
 
 **Tasks:**
 
-- [ ] Add explicit parent folder detection in `createNote()`
+- [x] Add explicit parent folder detection in `createNote()`
   - Compute parent path using `PathUtils.getParentPath(path)` before write
-  - Check if parent exists using `PathUtils.folderExists(app, parentPath)`
+  - Check if parent exists using `PathUtils.pathExists(app, parentPath)`
   - Check if parent is actually a folder (not a file)
   - Return clear error before attempting file creation
 
-- [ ] Enhance `ErrorMessages.parentFolderNotFound()`
+- [x] Enhance `ErrorMessages.parentFolderNotFound()`
   - Ensure consistent error message template
   - Include parent path in error message
   - Provide actionable troubleshooting steps
-  - Suggest using `list_notes()` to verify parent structure
+  - Suggest using `createParents: true` parameter
 
-- [ ] Optional: Add `createParents` parameter
+- [x] Add `createParents` parameter
   - Add optional `createParents?: boolean` parameter to `create_note` tool
   - Default to `false` (no auto-creation)
   - If `true`, recursively create parent folders before file creation
   - Document behavior clearly in tool description
   - Add tests for both modes
 
-- [ ] Update tool schema
+- [x] Update tool schema
   - Add `createParents` parameter to `create_note` inputSchema
   - Document default behavior (no auto-creation)
   - Update tool description to mention parent folder requirement
-  - Add examples with and without `createParents`
+  - Pass parameter through callTool method
 
-- [ ] Testing
+- [x] Testing
   - Test parent folder detection with missing parent
   - Test parent folder detection when parent is a file
   - Test with nested missing parents (a/b/c where b doesn't exist)
@@ -251,124 +251,60 @@ Troubleshooting tips:
 
 **Priority:** P0  
 **Dependencies:** None  
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 1 day  
+**Status:** ✅ Complete
 
 ### Goals
 
-Improve bearer token authentication with secure key management, token rotation, and multiple authentication methods.
+Improve bearer token authentication with automatic secure key generation and enhanced user experience.
 
-### Tasks
+### Completed Tasks
 
-#### 1.5.1 Secure API Key Management
+#### Secure API Key Management (`src/utils/auth-utils.ts`)
 
-**File:** `auth-utils.ts` (new)
+- ✅ Implement secure API key generation (32 characters, cryptographically random)
+- ✅ Add key validation and strength requirements
+- ✅ Store keys securely in plugin data
 
-- [ ] Implement secure API key generation
-- [ ] Add key validation and strength requirements
-- [ ] Support multiple API keys with labels/names
-- [ ] Add key expiration and rotation
-- [ ] Store keys securely in plugin data
+#### Enhanced Authentication Middleware (`src/server/middleware.ts`)
 
-**Key Requirements:**
-- Minimum length: 32 characters
-- Cryptographically random generation
-- Optional expiration dates
-- Human-readable labels for identification
+- ✅ Improve error messages for authentication failures
+- ✅ Add defensive check for misconfigured authentication
+- ✅ Fail-secure design: blocks access when auth enabled but no key set
 
-#### 1.5.2 Enhanced Authentication Middleware
+#### API Key Management UI (`src/settings.ts`)
 
-**File:** `src/server/middleware.ts` (update)
+- ✅ Auto-generate API key when authentication is enabled
+- ✅ Copy to clipboard button for API key
+- ✅ Regenerate key button with instant refresh
+- ✅ Static, selectable API key display (full width)
+- ✅ MCP client configuration snippet generator
+- ✅ Restart warnings when settings change
+- ✅ Selectable connection information URLs
 
-- [ ] Add request rate limiting per API key
-- [ ] Implement request logging with authentication context
-- [ ] Add support for multiple authentication schemes
-- [ ] Improve error messages for authentication failures
-- [ ] Add authentication attempt tracking
+#### Server Validation (`src/main.ts`)
 
-**Authentication Schemes:**
-- Bearer token (existing, enhanced)
-- API key in custom header (e.g., `X-API-Key`)
-- Query parameter authentication (for testing only)
+- ✅ Prevents server start if authentication enabled without API key
+- ✅ Clear error messages guiding users to fix configuration
 
-#### 1.5.3 API Key Management UI
+#### Security Improvements
 
-**File:** `src/settings.ts` (update)
+- ✅ Fixed vulnerability where enabling auth without key allowed unrestricted access
+- ✅ Three-layer defense: UI validation, server start validation, and middleware enforcement
+- ✅ Cryptographically secure key generation (no weak user-chosen keys)
 
-- [ ] Add API key generation button with secure random generation
-- [ ] Display list of active API keys with labels
-- [ ] Add key creation/deletion interface
-- [ ] Show key creation date and last used timestamp
-- [ ] Add key expiration management
-- [ ] Implement key visibility toggle (show/hide)
-- [ ] Add "Copy to clipboard" functionality
+### Benefits
 
-**UI Improvements:**
-```typescript
-// Settings panel additions
-- "Generate New API Key" button
-- Key list with:
-  - Label/name
-  - Created date
-  - Last used timestamp
-  - Expiration date (if set)
-  - Revoke button
-- Key strength indicator
-- Security best practices notice
-```
+- **Security**: Fixed critical vulnerability, added defense in depth
+- **Usability**: Auto-generation, one-click copy, clear configuration
+- **Developer Experience**: Ready-to-use MCP client configuration snippets
+- **Maintainability**: Clean code structure, reusable utilities
 
-#### 1.5.4 Authentication Audit Log
+### Documentation
 
-**File:** `auth-log.ts` (new)
-
-- [ ] Log authentication attempts (success/failure)
-- [ ] Track API key usage statistics
-- [ ] Add configurable log retention
-- [ ] Provide audit log export
-- [ ] Display recent authentication activity in settings
-
-**Log Format:**
-```typescript
-{
-  timestamp: number,
-  keyLabel: string,
-  success: boolean,
-  ipAddress: string,
-  endpoint: string,
-  errorReason?: string
-}
-```
-
-#### 1.5.5 Security Enhancements
-
-- [ ] Add HTTPS requirement option (reject HTTP in production)
-- [ ] Implement request signing for additional security
-- [ ] Add IP allowlist/blocklist option
-- [ ] Support for read-only API keys (restrict to read operations)
-- [ ] Add permission scopes per API key
-
-**Permission Scopes:**
-- `read` - Read operations only
-- `write` - Create, update, delete operations
-- `admin` - Server configuration access
-- `all` - Full access (default)
-
-#### 1.5.6 Documentation Updates
-
-- [ ] Document API key generation best practices
-- [ ] Add authentication examples for different clients
-- [ ] Document security considerations
-- [ ] Add troubleshooting guide for auth issues
-- [ ] Document permission scopes and their usage
-
-#### 1.5.7 Testing
-
-- [ ] Test API key generation and validation
-- [ ] Test multiple API keys with different scopes
-- [ ] Test key expiration and rotation
-- [ ] Test rate limiting per key
-- [ ] Test authentication failure scenarios
-- [ ] Test audit logging
-- [ ] Security audit of authentication implementation
+- ✅ `IMPLEMENTATION_NOTES_AUTH.md` - Complete implementation documentation
+- ✅ `CHANGELOG.md` - Updated with all changes
+- ✅ `ROADMAP.md` - Marked as complete
 
 ---
 

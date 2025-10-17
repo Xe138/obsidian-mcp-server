@@ -2,6 +2,96 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [1.2.0] - 2025-10-16
+
+### 📁 Enhanced Parent Folder Detection (Phase 1.5)
+
+Improved `create_note` tool with explicit parent folder validation and optional automatic folder creation.
+
+#### Added
+
+**Parent Folder Validation (`src/tools/note-tools.ts`)**
+- Explicit parent folder detection before file creation (fail-fast)
+- New `createParents` parameter for automatic folder creation
+- Recursive parent folder creation for deeply nested paths
+- Validates parent is a folder (not a file)
+- Clear error messages with actionable guidance
+
+**Tool Schema Updates (`src/tools/index.ts`)**
+- Added `createParents` boolean parameter to `create_note` tool
+- Default: `false` (safe behavior - requires parent folders to exist)
+- Optional: `true` (convenience - auto-creates missing parent folders)
+- Updated tool description with usage examples
+
+**Enhanced Error Messages (`src/utils/error-messages.ts`)**
+- `parentFolderNotFound()` now suggests using `createParents: true`
+- Provides example usage with auto-creation
+- Computes grandparent path for better `list_notes()` suggestions
+- Clear troubleshooting steps for missing parent folders
+
+**Comprehensive Test Suite (`tests/parent-folder-detection.test.ts`)**
+- 15 test cases covering all scenarios
+- Tests explicit parent folder detection
+- Tests recursive folder creation
+- Tests error handling and edge cases
+- Validates error message content
+
+#### Changed
+- `createNote()` signature: added optional `createParents` parameter
+- Parent folder validation now happens before file creation attempt
+- Error messages include `createParents` usage examples
+
+#### Benefits
+- **Fail-fast behavior**: Errors detected before attempting file creation
+- **Flexibility**: Optional auto-creation with `createParents: true`
+- **Robustness**: Handles deeply nested paths and all edge cases
+- **Backward compatible**: Existing code continues to work (default: `false`)
+
+### 🔐 Enhanced Authentication & Security (Phase 1.5)
+
+This update significantly improves authentication security and user experience with automatic key generation and enhanced UI.
+
+#### Added
+
+**Automatic API Key Generation (`src/utils/auth-utils.ts`)**
+- `generateApiKey()` - Cryptographically secure random key generation (32 characters)
+- `validateApiKey()` - API key validation with strength requirements
+- Uses `crypto.getRandomValues()` for secure randomness
+- Alphanumeric + special characters (`-`, `_`) for URL-safe keys
+
+**Enhanced Settings UI (`src/settings.ts`)**
+- Auto-generate API key when authentication is enabled
+- Copy to clipboard button for API key
+- Regenerate key button with instant refresh
+- Static, selectable API key display (full width)
+- MCP client configuration snippet generator
+  - Dynamically includes/excludes Authorization header based on auth status
+  - Correct `mcpServers` format with `serverUrl` field
+  - Copy configuration button for one-click copying
+  - Partially selectable text for easy copying
+- Restart warnings when authentication settings change
+- Selectable connection information URLs
+
+**Security Improvements (`src/server/middleware.ts`)**
+- Defensive authentication check: rejects requests if auth enabled but no key set
+- Improved error messages for authentication failures
+- Fail-secure design: blocks access when misconfigured
+
+**Server Validation (`src/main.ts`)**
+- Prevents server start if authentication enabled without API key
+- Clear error message guiding users to fix configuration
+- Validation runs before server initialization
+
+#### Changed
+- API key field changed from user-editable to auto-generated display
+- Configuration snippet now shows for both authenticated and non-authenticated setups
+- Connection information URLs are now selectable
+
+#### Security
+- Fixed vulnerability where enabling authentication without API key allowed unrestricted access
+- Three-layer defense: UI validation, server start validation, and middleware enforcement
+- API keys are now always cryptographically secure (no weak user-chosen keys)
+
 ## [1.1.0] - 2025-10-16
 
 ### 🎯 Phase 1.1: Path Normalization & Error Handling

@@ -53,7 +53,7 @@ export class NoteTools {
 		}
 	}
 
-	async createNote(path: string, content: string): Promise<CallToolResult> {
+	async createNote(path: string, content: string, createParents: boolean = false): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
 			return {
@@ -88,27 +88,69 @@ export class NoteTools {
 			};
 		}
 
+		// Explicit parent folder detection (before write operation)
+		const parentPath = PathUtils.getParentPath(normalizedPath);
+		if (parentPath) {
+			// Check if parent exists
+			if (!PathUtils.pathExists(this.app, parentPath)) {
+				if (createParents) {
+					// Auto-create parent folders recursively
+					try {
+						await this.createParentFolders(parentPath);
+					} catch (error) {
+						return {
+							content: [{ type: "text", text: ErrorMessages.operationFailed('create parent folders', parentPath, (error as Error).message) }],
+							isError: true
+						};
+					}
+				} else {
+					// Return clear error before attempting file creation
+					return {
+						content: [{ type: "text", text: ErrorMessages.parentFolderNotFound(normalizedPath, parentPath) }],
+						isError: true
+					};
+				}
+			}
+			
+			// Check if parent is actually a folder (not a file)
+			if (PathUtils.fileExists(this.app, parentPath)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(parentPath) }],
+					isError: true
+				};
+			}
+		}
+
+		// Proceed with file creation
 		try {
 			const file = await this.app.vault.create(normalizedPath, content);
 			return {
 				content: [{ type: "text", text: `Note created successfully: ${file.path}` }]
 			};
 		} catch (error) {
-			const errorMsg = (error as Error).message;
-			
-			// Check for parent folder not found error
-			if (errorMsg.includes('parent folder')) {
-				const parentPath = PathUtils.getParentPath(normalizedPath);
-				return {
-					content: [{ type: "text", text: ErrorMessages.parentFolderNotFound(normalizedPath, parentPath) }],
-					isError: true
-				};
-			}
-			
 			return {
-				content: [{ type: "text", text: ErrorMessages.operationFailed('create note', normalizedPath, errorMsg) }],
+				content: [{ type: "text", text: ErrorMessages.operationFailed('create note', normalizedPath, (error as Error).message) }],
 				isError: true
 			};
+		}
+	}
+
+	/**
+	 * Recursively create parent folders
+	 * @private
+	 */
+	private async createParentFolders(path: string): Promise<void> {
+		// Get parent path
+		const parentPath = PathUtils.getParentPath(path);
+		
+		// If there's a parent and it doesn't exist, create it first (recursion)
+		if (parentPath && !PathUtils.pathExists(this.app, parentPath)) {
+			await this.createParentFolders(parentPath);
+		}
+		
+		// Create the current folder if it doesn't exist
+		if (!PathUtils.pathExists(this.app, path)) {
+			await this.app.vault.createFolder(path);
 		}
 	}
 

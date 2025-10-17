@@ -69,6 +69,12 @@ export default class MCPServerPlugin extends Plugin {
 			return;
 		}
 
+		// Validate authentication configuration
+		if (this.settings.enableAuth && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
+			new Notice('⚠️ Cannot start server: Authentication is enabled but no API key is set. Please set an API key in settings or disable authentication.');
+			return;
+		}
+
 		try {
 			this.mcpServer = new MCPServer(this.app, this.settings);
 			await this.mcpServer.start();

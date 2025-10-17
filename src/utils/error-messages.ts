@@ -86,16 +86,22 @@ Troubleshooting tips:
 	 * Generate a parent folder not found error message
 	 */
 	static parentFolderNotFound(path: string, parentPath: string): string {
+		const grandparentPath = PathUtils.getParentPath(parentPath);
+		const listCommand = grandparentPath ? `list_notes("${grandparentPath}")` : 'list_notes()';
+		
 		return `Parent folder does not exist: "${parentPath}"
 
 Cannot create "${path}" because its parent folder is missing.
 
 Troubleshooting tips:
+• Use createParents: true parameter to automatically create missing parent folders
 • Create the parent folder first using Obsidian
-• Verify the folder path with list_notes("${PathUtils.getParentPath(parentPath) || '/'}")
+• Verify the folder path with ${listCommand}
 • Check that the parent folder path is correct (vault-relative, case-sensitive on macOS/Linux)
-• Note: Automatic parent folder creation is not currently enabled
-• Ensure all parent folders in the path exist before creating the file`;
+• Ensure all parent folders in the path exist before creating the file
+
+Example with auto-creation:
+create_note({ path: "${path}", content: "...", createParents: true })`;
 	}
 
 	/**
