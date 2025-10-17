@@ -1,10 +1,11 @@
 import { App, TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult, FolderWaypointResult, FolderNoteResult } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult, FolderWaypointResult, FolderNoteResult, ValidateWikilinksResult, ResolveWikilinkResult, BacklinksResult } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { GlobUtils } from '../utils/glob-utils';
 import { SearchUtils } from '../utils/search-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
+import { LinkUtils } from '../utils/link-utils';
 
 export class VaultTools {
 	constructor(private app: App) {}
@@ -684,6 +685,174 @@ export class VaultTools {
 				content: [{
 					type: "text",
 					text: `Is folder note error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	/**
+	 * Validate all wikilinks in a note
+	 * Reports resolved and unresolved links with suggestions
+	 */
+	async validateWikilinks(path: string): Promise<CallToolResult> {
+		try {
+			// Normalize and validate path
+			const normalizedPath = PathUtils.normalizePath(path);
+			
+			// Resolve file
+			const file = PathUtils.resolveFile(this.app, normalizedPath);
+			if (!file) {
+				return {
+					content: [{
+						type: "text",
+						text: ErrorMessages.fileNotFound(normalizedPath)
+					}],
+					isError: true
+				};
+			}
+
+			// Validate wikilinks
+			const { resolvedLinks, unresolvedLinks } = await LinkUtils.validateWikilinks(
+				this.app,
+				normalizedPath
+			);
+
+			const result: ValidateWikilinksResult = {
+				path: normalizedPath,
+				totalLinks: resolvedLinks.length + unresolvedLinks.length,
+				resolvedLinks,
+				unresolvedLinks
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Validate wikilinks error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	/**
+	 * Resolve a single wikilink from a source note
+	 * Returns the target path if resolvable, or suggestions if not
+	 */
+	async resolveWikilink(sourcePath: string, linkText: string): Promise<CallToolResult> {
+		try {
+			// Normalize and validate source path
+			const normalizedPath = PathUtils.normalizePath(sourcePath);
+			
+			// Resolve source file
+			const file = PathUtils.resolveFile(this.app, normalizedPath);
+			if (!file) {
+				return {
+					content: [{
+						type: "text",
+						text: ErrorMessages.fileNotFound(normalizedPath)
+					}],
+					isError: true
+				};
+			}
+
+			// Try to resolve the link
+			const resolvedFile = LinkUtils.resolveLink(this.app, normalizedPath, linkText);
+
+			const result: ResolveWikilinkResult = {
+				sourcePath: normalizedPath,
+				linkText,
+				resolved: resolvedFile !== null,
+				targetPath: resolvedFile?.path
+			};
+
+			// If not resolved, provide suggestions
+			if (!resolvedFile) {
+				result.suggestions = LinkUtils.findSuggestions(this.app, linkText);
+			}
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Resolve wikilink error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	/**
+	 * Get all backlinks to a note
+	 * Optionally includes unlinked mentions
+	 */
+	async getBacklinks(
+		path: string,
+		includeUnlinked: boolean = false,
+		includeSnippets: boolean = true
+	): Promise<CallToolResult> {
+		try {
+			// Normalize and validate path
+			const normalizedPath = PathUtils.normalizePath(path);
+			
+			// Resolve file
+			const file = PathUtils.resolveFile(this.app, normalizedPath);
+			if (!file) {
+				return {
+					content: [{
+						type: "text",
+						text: ErrorMessages.fileNotFound(normalizedPath)
+					}],
+					isError: true
+				};
+			}
+
+			// Get backlinks
+			const backlinks = await LinkUtils.getBacklinks(
+				this.app,
+				normalizedPath,
+				includeUnlinked
+			);
+
+			// If snippets not requested, remove them
+			if (!includeSnippets) {
+				for (const backlink of backlinks) {
+					for (const occurrence of backlink.occurrences) {
+						occurrence.snippet = '';
+					}
+				}
+			}
+
+			const result: BacklinksResult = {
+				path: normalizedPath,
+				backlinks,
+				totalBacklinks: backlinks.length
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Get backlinks error: ${(error as Error).message}`
 				}],
 				isError: true
 			};

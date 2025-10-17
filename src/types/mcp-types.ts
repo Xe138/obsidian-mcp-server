@@ -284,3 +284,70 @@ export interface DeleteNoteResult {
 	dryRun: boolean;
 	soft: boolean;
 }
+
+// Phase 9: Linking & Backlinks Types
+
+/**
+ * Resolved wikilink information
+ */
+export interface ResolvedLink {
+	text: string;
+	target: string;
+	alias?: string;
+}
+
+/**
+ * Unresolved wikilink information
+ */
+export interface UnresolvedLink {
+	text: string;
+	line: number;
+	suggestions: string[];
+}
+
+/**
+ * Result from validate_wikilinks operation
+ */
+export interface ValidateWikilinksResult {
+	path: string;
+	totalLinks: number;
+	resolvedLinks: ResolvedLink[];
+	unresolvedLinks: UnresolvedLink[];
+}
+
+/**
+ * Result from resolve_wikilink operation
+ */
+export interface ResolveWikilinkResult {
+	sourcePath: string;
+	linkText: string;
+	resolved: boolean;
+	targetPath?: string;
+	suggestions?: string[];
+}
+
+/**
+ * Backlink occurrence in a file
+ */
+export interface BacklinkOccurrence {
+	line: number;
+	snippet: string;
+}
+
+/**
+ * Backlink from a source file
+ */
+export interface BacklinkInfo {
+	sourcePath: string;
+	type: 'linked' | 'unlinked';
+	occurrences: BacklinkOccurrence[];
+}
+
+/**
+ * Result from backlinks operation
+ */
+export interface BacklinksResult {
+	path: string;
+	backlinks: BacklinkInfo[];
+	totalBacklinks: number;
+}

@@ -2,6 +2,131 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [8.0.0] - 2025-10-17
+
+### 🚀 Phase 9: Linking & Backlinks
+
+This release adds powerful tools for working with wikilinks, resolving links, and querying backlinks. Enables programmatic link validation, resolution, and knowledge graph exploration.
+
+#### Added
+
+**New Tool: `validate_wikilinks`**
+- Validate all wikilinks in a note and report unresolved links
+- Parses all `[[wikilinks]]` in the file using regex
+- Resolves links using Obsidian's MetadataCache for accuracy
+- Provides suggestions for broken links using fuzzy matching
+- Returns structured JSON with:
+  - `path` - File path
+  - `totalLinks` - Total number of links found
+  - `resolvedLinks` - Array of resolved links with:
+    - `text` - Full link text including brackets
+    - `target` - Resolved target file path
+    - `alias` - Display alias (if present)
+  - `unresolvedLinks` - Array of unresolved links with:
+    - `text` - Full link text including brackets
+    - `line` - Line number where link appears
+    - `suggestions` - Array of suggested target paths
+- Supports both `[[link]]` and `[[link|alias]]` formats
+- Handles links with headings `[[note#heading]]`
+- Use to identify and fix broken links in notes
+
+**New Tool: `resolve_wikilink`**
+- Resolve a single wikilink from a source note to its target path
+- Uses Obsidian's MetadataCache.getFirstLinkpathDest() for accurate resolution
+- Follows Obsidian's link resolution rules:
+  - Shortest path matching
+  - Relative paths
+  - Aliases
+  - Headings and blocks
+- Returns structured JSON with:
+  - `sourcePath` - Source note path
+  - `linkText` - Link text to resolve (without brackets)
+  - `resolved` - Boolean indicating if link was resolved
+  - `targetPath` - Resolved target file path (if found)
+  - `suggestions` - Array of suggested paths (if not found)
+- Parameters:
+  - `sourcePath` - Path of note containing the link
+  - `linkText` - Link text without brackets (e.g., "target note", "folder/note", "note#heading")
+- Supports complex link formats (headings, aliases, relative paths)
+- Use to programmatically resolve links before following them
+
+**New Tool: `backlinks`**
+- Get all backlinks to a note with optional unlinked mentions
+- Uses Obsidian's MetadataCache.getBacklinksForFile() for linked backlinks
+- Optional text-based search for unlinked mentions
+- Returns structured JSON with:
+  - `path` - Target note path
+  - `backlinks` - Array of backlinks with:
+    - `sourcePath` - Source file path containing the link
+    - `type` - Either "linked" (wikilink) or "unlinked" (text mention)
+    - `occurrences` - Array of occurrences with:
+      - `line` - Line number (1-indexed)
+      - `snippet` - Context snippet around the link
+  - `totalBacklinks` - Total number of backlinks
+- Parameters:
+  - `path` - Target note path
+  - `includeUnlinked` - Include unlinked mentions (default: false)
+  - `includeSnippets` - Include context snippets (default: true)
+- Efficient use of Obsidian's built-in caching and indexing
+- Use to explore note connections and build knowledge graphs
+- Warning: `includeUnlinked` can be slow for large vaults
+
+**New Utility: `link-utils.ts`**
+- `LinkUtils` class for wikilink operations
+- `parseWikilinks()` - Parse all wikilinks from content with positions
+- `resolveLink()` - Resolve a wikilink to its target file
+- `findSuggestions()` - Find potential matches for unresolved links
+- `getBacklinks()` - Get all backlinks to a file
+- `validateWikilinks()` - Validate all wikilinks in a file
+- Regex-based wikilink parsing: `/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g`
+- Fuzzy matching algorithm for link suggestions
+- Handles edge cases (circular links, missing files)
+
+#### Modified
+
+**Updated: `vault-tools.ts`**
+- Added `validateWikilinks()` method
+- Added `resolveWikilink()` method
+- Added `getBacklinks()` method
+- Imports LinkUtils for wikilink operations
+
+**Updated: `index.ts` (Tool Registry)**
+- Added `validate_wikilinks` tool definition
+- Added `resolve_wikilink` tool definition
+- Added `backlinks` tool definition
+- Added case handlers for three new tools
+
+**Updated: `mcp-types.ts`**
+- Added Phase 9 types:
+  - `ResolvedLink` - Resolved wikilink information
+  - `UnresolvedLink` - Unresolved wikilink information
+  - `ValidateWikilinksResult` - Result from validate_wikilinks
+  - `ResolveWikilinkResult` - Result from resolve_wikilink
+  - `BacklinkOccurrence` - Backlink occurrence in a file
+  - `BacklinkInfo` - Backlink from a source file
+  - `BacklinksResult` - Result from backlinks operation
+
+#### Benefits
+
+- **Link Validation**: Identify and fix broken links in notes
+- **Link Resolution**: Programmatically resolve links before following them
+- **Knowledge Graphs**: Explore note connections and build knowledge graphs
+- **Complex Links**: Support for headings, aliases, and relative paths
+- **Accurate Resolution**: Uses Obsidian's native link resolution rules
+- **Performance**: Efficient use of MetadataCache and built-in indexing
+- **Suggestions**: Fuzzy matching helps find intended targets for broken links
+
+#### Technical Details
+
+- Wikilink parsing uses regex: `/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g`
+- Link resolution uses `MetadataCache.getFirstLinkpathDest()`
+- Backlink detection uses `MetadataCache.getBacklinksForFile()`
+- Suggestion engine uses multi-factor scoring (basename, path, character matching)
+- Unlinked mentions use word boundary regex for whole-word matching
+- Context snippets extracted with configurable length (default: 100 chars)
+
+---
+
 ## [7.0.0] - 2025-10-17
 
 ### 🚀 Phase 8: Write Operations & Concurrency

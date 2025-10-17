@@ -385,6 +385,60 @@ export class ToolRegistry {
 					},
 					required: ["path"]
 				}
+			},
+			{
+				name: "validate_wikilinks",
+				description: "Validate all wikilinks in a note and report unresolved links. Parses all [[wikilinks]] in the file, resolves them using Obsidian's link resolution rules, and provides suggestions for broken links. Returns structured JSON with total link count, arrays of resolved links (with targets) and unresolved links (with suggestions). Use this to identify and fix broken links in your notes.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to the note to validate (e.g., 'projects/project.md'). Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						}
+					},
+					required: ["path"]
+				}
+			},
+			{
+				name: "resolve_wikilink",
+				description: "Resolve a single wikilink from a source note to its target path. Uses Obsidian's link resolution rules including shortest path matching, relative paths, and aliases. Returns structured JSON with resolution status, target path if found, or suggestions if not found. Supports links with headings ([[note#heading]]) and aliases ([[note|alias]]). Use this to programmatically resolve links before following them.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						sourcePath: {
+							type: "string",
+							description: "Vault-relative path to the source note containing the link (e.g., 'projects/project.md'). Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						linkText: {
+							type: "string",
+							description: "The wikilink text to resolve (without brackets). Examples: 'target note', 'folder/note', 'note#heading', 'note|alias'. Can include heading references and aliases."
+						}
+					},
+					required: ["sourcePath", "linkText"]
+				}
+			},
+			{
+				name: "backlinks",
+				description: "Get all backlinks to a note. Returns all notes that link to the target note, with optional unlinked mentions (text references without wikilinks). Uses Obsidian's MetadataCache for accurate backlink detection. Returns structured JSON with array of backlinks, each containing source path, type (linked/unlinked), and occurrences with line numbers and context snippets. Use this to explore note connections and build knowledge graphs.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to the target note (e.g., 'concepts/important-concept.md'). Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						includeUnlinked: {
+							type: "boolean",
+							description: "If true, include unlinked mentions (text references without [[brackets]]). If false (default), only include wikilinks. Default: false. Warning: enabling this can be slow for large vaults."
+						},
+						includeSnippets: {
+							type: "boolean",
+							description: "If true (default), include context snippets for each backlink occurrence. If false, omit snippets to reduce response size. Default: true"
+						}
+					},
+					required: ["path"]
+				}
 			}
 		];
 	}
@@ -474,6 +528,16 @@ export class ToolRegistry {
 					return await this.vaultTools.getFolderWaypoint(args.path);
 				case "is_folder_note":
 					return await this.vaultTools.isFolderNote(args.path);
+				case "validate_wikilinks":
+					return await this.vaultTools.validateWikilinks(args.path);
+				case "resolve_wikilink":
+					return await this.vaultTools.resolveWikilink(args.sourcePath, args.linkText);
+				case "backlinks":
+					return await this.vaultTools.getBacklinks(
+						args.path,
+						args.includeUnlinked ?? false,
+						args.includeSnippets ?? true
+					);
 				default:
 					return {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],
