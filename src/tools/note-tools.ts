@@ -1,9 +1,21 @@
 import { App, TFile } from 'obsidian';
-import { CallToolResult, ParsedNote, ExcalidrawMetadata } from '../types/mcp-types';
+import { 
+	CallToolResult, 
+	ParsedNote, 
+	ExcalidrawMetadata,
+	UpdateFrontmatterResult,
+	UpdateSectionsResult,
+	CreateNoteResult,
+	RenameFileResult,
+	DeleteNoteResult,
+	SectionEdit,
+	ConflictStrategy
+} from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { FrontmatterUtils } from '../utils/frontmatter-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
+import { VersionUtils } from '../utils/version-utils';
 
 export class NoteTools {
 	constructor(private app: App) {}
@@ -95,7 +107,12 @@ export class NoteTools {
 		}
 	}
 
-	async createNote(path: string, content: string, createParents: boolean = false): Promise<CallToolResult> {
+	async createNote(
+		path: string, 
+		content: string, 
+		createParents: boolean = false,
+		onConflict: ConflictStrategy = 'error'
+	): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
 			return {
@@ -112,26 +129,42 @@ export class NoteTools {
 		}
 
 		// Normalize the path
-		const normalizedPath = PathUtils.normalizePath(path);
+		let normalizedPath = PathUtils.normalizePath(path);
+		let finalPath = normalizedPath;
+		let wasRenamed = false;
+		let originalPath: string | undefined;
 
 		// Check if file already exists
 		if (PathUtils.fileExists(this.app, normalizedPath)) {
-			return {
-				content: [{ type: "text", text: ErrorMessages.pathAlreadyExists(normalizedPath, 'file') }],
-				isError: true
-			};
+			if (onConflict === 'error') {
+				return {
+					content: [{ type: "text", text: ErrorMessages.pathAlreadyExists(normalizedPath, 'file') }],
+					isError: true
+				};
+			} else if (onConflict === 'overwrite') {
+				// Delete existing file before creating
+				const existingFile = PathUtils.resolveFile(this.app, normalizedPath);
+				if (existingFile) {
+					await this.app.vault.delete(existingFile);
+				}
+			} else if (onConflict === 'rename') {
+				// Generate a unique name
+				originalPath = normalizedPath;
+				finalPath = this.generateUniquePath(normalizedPath);
+				wasRenamed = true;
+			}
 		}
 
 		// Check if it's a folder
-		if (PathUtils.folderExists(this.app, normalizedPath)) {
+		if (PathUtils.folderExists(this.app, finalPath)) {
 			return {
-				content: [{ type: "text", text: ErrorMessages.notAFile(normalizedPath) }],
+				content: [{ type: "text", text: ErrorMessages.notAFile(finalPath) }],
 				isError: true
 			};
 		}
 
 		// Explicit parent folder detection (before write operation)
-		const parentPath = PathUtils.getParentPath(normalizedPath);
+		const parentPath = PathUtils.getParentPath(finalPath);
 		if (parentPath) {
 			// First check if parent path is actually a file (not a folder)
 			if (PathUtils.fileExists(this.app, parentPath)) {
@@ -156,7 +189,7 @@ export class NoteTools {
 				} else {
 					// Return clear error before attempting file creation
 					return {
-						content: [{ type: "text", text: ErrorMessages.parentFolderNotFound(normalizedPath, parentPath) }],
+						content: [{ type: "text", text: ErrorMessages.parentFolderNotFound(finalPath, parentPath) }],
 						isError: true
 					};
 				}
@@ -165,16 +198,43 @@ export class NoteTools {
 
 		// Proceed with file creation
 		try {
-			const file = await this.app.vault.create(normalizedPath, content);
+			const file = await this.app.vault.create(finalPath, content);
+			
+			const result: CreateNoteResult = {
+				success: true,
+				path: file.path,
+				versionId: VersionUtils.generateVersionId(file),
+				created: file.stat.ctime,
+				renamed: wasRenamed,
+				originalPath: originalPath
+			};
+
 			return {
-				content: [{ type: "text", text: `Note created successfully: ${file.path}` }]
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
 			};
 		} catch (error) {
 			return {
-				content: [{ type: "text", text: ErrorMessages.operationFailed('create note', normalizedPath, (error as Error).message) }],
+				content: [{ type: "text", text: ErrorMessages.operationFailed('create note', finalPath, (error as Error).message) }],
 				isError: true
 			};
 		}
+	}
+
+	/**
+	 * Generate a unique path by appending a number to the filename
+	 * @private
+	 */
+	private generateUniquePath(path: string): string {
+		const basePath = path.replace(/\.md$/, '');
+		let counter = 1;
+		let newPath = `${basePath} ${counter}.md`;
+		
+		while (PathUtils.fileExists(this.app, newPath)) {
+			counter++;
+			newPath = `${basePath} ${counter}.md`;
+		}
+		
+		return newPath;
 	}
 
 	/**
@@ -265,7 +325,138 @@ export class NoteTools {
 		}
 	}
 
-	async deleteNote(path: string): Promise<CallToolResult> {
+	/**
+	 * Rename or move a file with automatic link updates
+	 * Uses Obsidian's FileManager to maintain link integrity
+	 */
+	async renameFile(
+		path: string,
+		newPath: string,
+		updateLinks: boolean = true,
+		ifMatch?: string
+	): Promise<CallToolResult> {
+		// Validate paths
+		if (!path || path.trim() === '') {
+			return {
+				content: [{ type: "text", text: ErrorMessages.emptyPath() }],
+				isError: true
+			};
+		}
+
+		if (!newPath || newPath.trim() === '') {
+			return {
+				content: [{ type: "text", text: JSON.stringify({ error: 'New path cannot be empty' }, null, 2) }],
+				isError: true
+			};
+		}
+
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		if (!PathUtils.isValidVaultPath(newPath)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(newPath) }],
+				isError: true
+			};
+		}
+
+		// Resolve source file
+		const file = PathUtils.resolveFile(this.app, path);
+		
+		if (!file) {
+			if (PathUtils.folderExists(this.app, path)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFile(path) }],
+					isError: true
+				};
+			}
+			
+			return {
+				content: [{ type: "text", text: ErrorMessages.fileNotFound(path) }],
+				isError: true
+			};
+		}
+
+		// Normalize new path
+		const normalizedNewPath = PathUtils.normalizePath(newPath);
+
+		// Check if destination already exists
+		if (PathUtils.fileExists(this.app, normalizedNewPath)) {
+			return {
+				content: [{ 
+					type: "text", 
+					text: JSON.stringify({
+						error: 'Destination file already exists',
+						path: normalizedNewPath,
+						message: 'Cannot rename/move file because a file already exists at the destination path.'
+					}, null, 2)
+				}],
+				isError: true
+			};
+		}
+
+		if (PathUtils.folderExists(this.app, normalizedNewPath)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.notAFile(normalizedNewPath) }],
+				isError: true
+			};
+		}
+
+		try {
+			// Check version if ifMatch provided
+			if (ifMatch && !VersionUtils.validateVersion(file, ifMatch)) {
+				const currentVersion = VersionUtils.generateVersionId(file);
+				return {
+					content: [{ type: "text", text: VersionUtils.versionMismatchError(path, ifMatch, currentVersion) }],
+					isError: true
+				};
+			}
+
+			// Create parent folder if needed
+			const parentPath = PathUtils.getParentPath(normalizedNewPath);
+			if (parentPath && !PathUtils.pathExists(this.app, parentPath)) {
+				await this.createParentFolders(parentPath);
+			}
+
+			// Use Obsidian's FileManager to rename (automatically updates links)
+			// Note: Obsidian's renameFile automatically updates all wikilinks
+			await this.app.fileManager.renameFile(file, normalizedNewPath);
+
+			// Get the renamed file to get version info
+			const renamedFile = PathUtils.resolveFile(this.app, normalizedNewPath);
+			
+			// Note: We cannot reliably track which files were updated without the backlinks API
+			// The FileManager handles link updates internally
+			const result: RenameFileResult = {
+				success: true,
+				oldPath: path,
+				newPath: normalizedNewPath,
+				linksUpdated: 0, // Cannot track without backlinks API
+				affectedFiles: [], // Cannot track without backlinks API
+				versionId: renamedFile ? VersionUtils.generateVersionId(renamedFile) : ''
+			};
+
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+			};
+		} catch (error) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.operationFailed('rename file', path, (error as Error).message) }],
+				isError: true
+			};
+		}
+	}
+
+	async deleteNote(
+		path: string,
+		soft: boolean = true,
+		dryRun: boolean = false,
+		ifMatch?: string
+	): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
 			return {
@@ -300,9 +491,56 @@ export class NoteTools {
 		}
 
 		try {
-			await this.app.vault.delete(file);
+			// Check version if ifMatch provided
+			if (ifMatch && !VersionUtils.validateVersion(file, ifMatch)) {
+				const currentVersion = VersionUtils.generateVersionId(file);
+				return {
+					content: [{ type: "text", text: VersionUtils.versionMismatchError(path, ifMatch, currentVersion) }],
+					isError: true
+				};
+			}
+
+			let destination: string | undefined;
+
+			// Dry run - just return what would happen
+			if (dryRun) {
+				if (soft) {
+					destination = `.trash/${file.name}`;
+				}
+				
+				const result: DeleteNoteResult = {
+					deleted: false,
+					path: file.path,
+					destination,
+					dryRun: true,
+					soft
+				};
+
+				return {
+					content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+				};
+			}
+
+			// Perform actual deletion
+			if (soft) {
+				// Move to trash using Obsidian's trash method
+				await this.app.vault.trash(file, true);
+				destination = `.trash/${file.name}`;
+			} else {
+				// Permanent deletion
+				await this.app.vault.delete(file);
+			}
+
+			const result: DeleteNoteResult = {
+				deleted: true,
+				path: file.path,
+				destination,
+				dryRun: false,
+				soft
+			};
+
 			return {
-				content: [{ type: "text", text: `Note deleted successfully: ${file.path}` }]
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
 			};
 		} catch (error) {
 			return {
@@ -410,6 +648,266 @@ export class NoteTools {
 		} catch (error) {
 			return {
 				content: [{ type: "text", text: ErrorMessages.operationFailed('read excalidraw', path, (error as Error).message) }],
+				isError: true
+			};
+		}
+	}
+
+	/**
+	 * Update frontmatter fields without modifying content
+	 * Supports patch operations (add/update) and removal of keys
+	 * At least one of patch or remove must be provided
+	 * Includes concurrency control via ifMatch parameter
+	 */
+	async updateFrontmatter(
+		path: string,
+		patch?: Record<string, any>,
+		remove: string[] = [],
+		ifMatch?: string
+	): Promise<CallToolResult> {
+		// Validate path
+		if (!path || path.trim() === '') {
+			return {
+				content: [{ type: "text", text: ErrorMessages.emptyPath() }],
+				isError: true
+			};
+		}
+
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		// Validate that at least one operation is provided
+		const hasPatch = patch && typeof patch === 'object' && Object.keys(patch).length > 0;
+		const hasRemove = remove && Array.isArray(remove) && remove.length > 0;
+		
+		if (!hasPatch && !hasRemove) {
+			return {
+				content: [{ 
+					type: "text", 
+					text: JSON.stringify({
+						error: 'No operations provided',
+						message: 'At least one of "patch" or "remove" must be provided with values.'
+					}, null, 2)
+				}],
+				isError: true
+			};
+		}
+
+		// Resolve file
+		const file = PathUtils.resolveFile(this.app, path);
+		
+		if (!file) {
+			if (PathUtils.folderExists(this.app, path)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFile(path) }],
+					isError: true
+				};
+			}
+			
+			return {
+				content: [{ type: "text", text: ErrorMessages.fileNotFound(path) }],
+				isError: true
+			};
+		}
+
+		try {
+			// Check version if ifMatch provided
+			if (ifMatch && !VersionUtils.validateVersion(file, ifMatch)) {
+				const currentVersion = VersionUtils.generateVersionId(file);
+				return {
+					content: [{ type: "text", text: VersionUtils.versionMismatchError(path, ifMatch, currentVersion) }],
+					isError: true
+				};
+			}
+
+			// Read current content
+			const content = await this.app.vault.read(file);
+			const extracted = FrontmatterUtils.extractFrontmatter(content);
+
+			// Get current frontmatter or create new
+			let frontmatterData = extracted.parsedFrontmatter || {};
+
+			// Track changes
+			const updatedFields: string[] = [];
+			const removedFields: string[] = [];
+
+			// Apply patch (add/update fields) - only if patch is provided
+			if (patch && typeof patch === 'object') {
+				for (const [key, value] of Object.entries(patch)) {
+					frontmatterData[key] = value;
+					updatedFields.push(key);
+				}
+			}
+
+			// Remove fields
+			if (remove && Array.isArray(remove)) {
+				for (const key of remove) {
+					if (key in frontmatterData) {
+						delete frontmatterData[key];
+						removedFields.push(key);
+					}
+				}
+			}
+
+			// Serialize frontmatter
+			const newFrontmatter = FrontmatterUtils.serializeFrontmatter(frontmatterData);
+
+			// Reconstruct content
+			let newContent: string;
+			if (extracted.hasFrontmatter) {
+				// Replace existing frontmatter
+				newContent = newFrontmatter + '\n' + extracted.contentWithoutFrontmatter;
+			} else {
+				// Add frontmatter at the beginning
+				newContent = newFrontmatter + '\n' + content;
+			}
+
+			// Write back
+			await this.app.vault.modify(file, newContent);
+
+			// Generate response with version info
+			const result: UpdateFrontmatterResult = {
+				success: true,
+				path: file.path,
+				versionId: VersionUtils.generateVersionId(file),
+				modified: file.stat.mtime,
+				updatedFields,
+				removedFields
+			};
+
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+			};
+		} catch (error) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.operationFailed('update frontmatter', path, (error as Error).message) }],
+				isError: true
+			};
+		}
+	}
+
+	/**
+	 * Update specific sections of a note by line range
+	 * Reduces race conditions by avoiding full overwrites
+	 * Includes concurrency control via ifMatch parameter
+	 */
+	async updateSections(
+		path: string,
+		edits: SectionEdit[],
+		ifMatch?: string
+	): Promise<CallToolResult> {
+		// Validate path
+		if (!path || path.trim() === '') {
+			return {
+				content: [{ type: "text", text: ErrorMessages.emptyPath() }],
+				isError: true
+			};
+		}
+
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		// Validate edits
+		if (!edits || edits.length === 0) {
+			return {
+				content: [{ type: "text", text: JSON.stringify({ error: 'No edits provided' }, null, 2) }],
+				isError: true
+			};
+		}
+
+		// Resolve file
+		const file = PathUtils.resolveFile(this.app, path);
+		
+		if (!file) {
+			if (PathUtils.folderExists(this.app, path)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFile(path) }],
+					isError: true
+				};
+			}
+			
+			return {
+				content: [{ type: "text", text: ErrorMessages.fileNotFound(path) }],
+				isError: true
+			};
+		}
+
+		try {
+			// Check version if ifMatch provided
+			if (ifMatch && !VersionUtils.validateVersion(file, ifMatch)) {
+				const currentVersion = VersionUtils.generateVersionId(file);
+				return {
+					content: [{ type: "text", text: VersionUtils.versionMismatchError(path, ifMatch, currentVersion) }],
+					isError: true
+				};
+			}
+
+			// Read current content
+			const content = await this.app.vault.read(file);
+			const lines = content.split('\n');
+
+			// Sort edits by startLine in descending order to apply from bottom to top
+			// This prevents line number shifts from affecting subsequent edits
+			const sortedEdits = [...edits].sort((a, b) => b.startLine - a.startLine);
+
+			// Validate all edits before applying
+			for (const edit of sortedEdits) {
+				if (edit.startLine < 1 || edit.endLine < edit.startLine || edit.endLine > lines.length) {
+					return {
+						content: [{ 
+							type: "text", 
+							text: JSON.stringify({
+								error: 'Invalid line range',
+								edit,
+								totalLines: lines.length,
+								message: `Line range ${edit.startLine}-${edit.endLine} is invalid. File has ${lines.length} lines.`
+							}, null, 2)
+						}],
+						isError: true
+					};
+				}
+			}
+
+			// Apply edits from bottom to top
+			for (const edit of sortedEdits) {
+				// Convert to 0-indexed
+				const startIdx = edit.startLine - 1;
+				const endIdx = edit.endLine; // endLine is inclusive, so we don't subtract 1
+
+				// Replace the section
+				const newLines = edit.content.split('\n');
+				lines.splice(startIdx, endIdx - startIdx, ...newLines);
+			}
+
+			// Reconstruct content
+			const newContent = lines.join('\n');
+
+			// Write back
+			await this.app.vault.modify(file, newContent);
+
+			// Generate response with version info
+			const result: UpdateSectionsResult = {
+				success: true,
+				path: file.path,
+				versionId: VersionUtils.generateVersionId(file),
+				modified: file.stat.mtime,
+				sectionsUpdated: edits.length
+			};
+
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+			};
+		} catch (error) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.operationFailed('update sections', path, (error as Error).message) }],
 				isError: true
 			};
 		}

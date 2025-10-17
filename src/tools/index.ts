@@ -42,7 +42,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "create_note",
-				description: "Create a new file in the Obsidian vault. Use this to create a new note or file. By default, parent folders must already exist. Set createParents to true to automatically create missing parent folders. Path must be vault-relative with file extension. Will fail if the file already exists. Use list_notes() to verify the parent folder exists before creating.",
+				description: "Create a new file in the Obsidian vault with conflict handling. Returns structured JSON with success status, path, versionId, created timestamp, and conflict resolution details. Supports automatic parent folder creation and three conflict strategies: 'error' (default, fail if exists), 'overwrite' (replace existing), 'rename' (auto-generate unique name). Use this to create new notes with robust error handling.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -57,6 +57,11 @@ export class ToolRegistry {
 						createParents: {
 							type: "boolean",
 							description: "If true, automatically create missing parent folders. If false (default), returns an error if parent folders don't exist. Default: false"
+						},
+						onConflict: {
+							type: "string",
+							enum: ["error", "overwrite", "rename"],
+							description: "Conflict resolution strategy if file already exists. 'error' (default): fail with error. 'overwrite': delete existing file and create new. 'rename': auto-generate unique name by appending number. Default: 'error'"
 						}
 					},
 					required: ["path", "content"]
@@ -82,16 +87,112 @@ export class ToolRegistry {
 			},
 			{
 				name: "delete_note",
-				description: "Delete a file from the Obsidian vault. Use this to permanently remove a file. This only works on files, NOT folders. The file must exist. Path must be vault-relative with file extension. This operation cannot be undone through the API.",
+				description: "Delete a file from the Obsidian vault with safety options. Returns structured JSON with deletion status, path, destination (for soft deletes), and operation mode. Supports soft delete (move to .trash folder, default) and permanent deletion. Use dryRun to preview deletion without executing. Includes concurrency control via ifMatch parameter. This only works on files, NOT folders.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
 							description: "Vault-relative path to the file to delete (e.g., 'folder/note.md'). Must be a file, not a folder. Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						soft: {
+							type: "boolean",
+							description: "If true (default), move file to .trash folder (recoverable). If false, permanently delete (cannot be undone). Default: true"
+						},
+						dryRun: {
+							type: "boolean",
+							description: "If true, preview deletion without executing. Returns what would happen. If false (default), perform actual deletion. Default: false"
+						},
+						ifMatch: {
+							type: "string",
+							description: "Optional ETag/versionId for concurrency control. If provided, deletion only proceeds if file hasn't been modified. Get versionId from read operations. Prevents accidental deletion of modified files."
 						}
 					},
 					required: ["path"]
+				}
+			},
+			{
+				name: "update_frontmatter",
+				description: "Update frontmatter fields without modifying note content. Supports patch operations (add/update fields) and removal of keys. At least one of 'patch' or 'remove' must be provided. Returns structured JSON with success status, path, versionId, modified timestamp, and lists of updated/removed fields. Includes concurrency control via ifMatch parameter. Use this for metadata-only updates to avoid race conditions with content edits.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to the file (e.g., 'folder/note.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						patch: {
+							type: "object",
+							description: "Optional object with frontmatter fields to add or update. Keys are field names, values are field values. Supports strings, numbers, booleans, arrays, and nested objects. Example: {\"tags\": [\"project\", \"active\"], \"status\": \"in-progress\"}. Can be omitted if only removing fields."
+						},
+						remove: {
+							type: "array",
+							items: { type: "string" },
+							description: "Optional array of frontmatter field names to remove. Example: [\"draft\", \"old_status\"]. Fields that don't exist are silently ignored. Can be omitted if only adding/updating fields."
+						},
+						ifMatch: {
+							type: "string",
+							description: "Optional ETag/versionId for concurrency control. If provided, update only proceeds if file hasn't been modified. Get versionId from read operations. Prevents lost updates in concurrent scenarios."
+						}
+					},
+					required: ["path"]
+				}
+			},
+			{
+				name: "update_sections",
+				description: "Update specific sections of a note by line range. Reduces race conditions by avoiding full file overwrites. Returns structured JSON with success status, path, versionId, modified timestamp, and count of sections updated. Supports multiple edits in a single operation, applied from bottom to top to preserve line numbers. Includes concurrency control via ifMatch parameter. Use this for surgical edits to specific parts of large notes.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to the file (e.g., 'folder/note.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						edits: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									startLine: { type: "number", description: "Starting line number (1-indexed, inclusive)" },
+									endLine: { type: "number", description: "Ending line number (1-indexed, inclusive)" },
+									content: { type: "string", description: "New content to replace the section" }
+								},
+								required: ["startLine", "endLine", "content"]
+							},
+							description: "Array of section edits to apply. Each edit specifies a line range and replacement content. Edits are applied from bottom to top to prevent line number shifts. Example: [{\"startLine\": 10, \"endLine\": 15, \"content\": \"New section content\"}]"
+						},
+						ifMatch: {
+							type: "string",
+							description: "Optional ETag/versionId for concurrency control. If provided, update only proceeds if file hasn't been modified. Get versionId from read operations. Prevents conflicting edits in concurrent scenarios."
+						}
+					},
+					required: ["path", "edits"]
+				}
+			},
+			{
+				name: "rename_file",
+				description: "Rename or move a file with automatic wikilink updates. Uses Obsidian's FileManager to maintain link integrity across the vault. Returns structured JSON with success status, old/new paths, and versionId. Note: linksUpdated and affectedFiles fields always return 0/empty due to API limitations, but links ARE automatically updated by Obsidian. Supports both rename (same folder) and move (different folder) operations. Automatically creates parent folders if needed. Includes concurrency control via ifMatch parameter. Use this to reorganize vault structure while preserving all internal links.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Current vault-relative path to the file (e.g., 'folder/note.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						newPath: {
+							type: "string",
+							description: "New vault-relative path for the file (e.g., 'archive/2024/note.md' or 'folder/renamed.md'). Can be in a different folder for move operations. Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						updateLinks: {
+							type: "boolean",
+							description: "If true (default), automatically update all wikilinks that reference this file. If false, links will break. Recommended to keep true. Default: true"
+						},
+						ifMatch: {
+							type: "string",
+							description: "Optional ETag/versionId for concurrency control. If provided, rename only proceeds if file hasn't been modified. Get versionId from read operations. Prevents renaming modified files."
+						}
+					},
+					required: ["path", "newPath"]
 				}
 			},
 			{
@@ -298,11 +399,41 @@ export class ToolRegistry {
 						parseFrontmatter: args.parseFrontmatter
 					});
 				case "create_note":
-					return await this.noteTools.createNote(args.path, args.content, args.createParents ?? false);
+					return await this.noteTools.createNote(
+						args.path, 
+						args.content, 
+						args.createParents ?? false,
+						args.onConflict ?? 'error'
+					);
 				case "update_note":
 					return await this.noteTools.updateNote(args.path, args.content);
+				case "update_frontmatter":
+					return await this.noteTools.updateFrontmatter(
+						args.path,
+						args.patch,
+						args.remove ?? [],
+						args.ifMatch
+					);
+				case "update_sections":
+					return await this.noteTools.updateSections(
+						args.path,
+						args.edits,
+						args.ifMatch
+					);
+				case "rename_file":
+					return await this.noteTools.renameFile(
+						args.path,
+						args.newPath,
+						args.updateLinks ?? true,
+						args.ifMatch
+					);
 				case "delete_note":
-					return await this.noteTools.deleteNote(args.path);
+					return await this.noteTools.deleteNote(
+						args.path,
+						args.soft ?? true,
+						args.dryRun ?? false,
+						args.ifMatch
+					);
 				case "search":
 					return await this.vaultTools.search({
 						query: args.query,

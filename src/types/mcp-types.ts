@@ -207,3 +207,80 @@ export interface ExcalidrawMetadata {
 	/** Full compressed drawing data (when includeCompressed=true) */
 	compressedData?: string;
 }
+
+// Phase 8: Write Operations & Concurrency Types
+
+/**
+ * Conflict resolution strategy for create_note
+ */
+export type ConflictStrategy = 'error' | 'overwrite' | 'rename';
+
+/**
+ * Section edit operation for update_sections
+ */
+export interface SectionEdit {
+	/** Starting line number (1-indexed) */
+	startLine: number;
+	/** Ending line number (1-indexed, inclusive) */
+	endLine: number;
+	/** New content to replace the section */
+	content: string;
+}
+
+/**
+ * Result from update_frontmatter operation
+ */
+export interface UpdateFrontmatterResult {
+	success: boolean;
+	path: string;
+	versionId: string;
+	modified: number;
+	updatedFields: string[];
+	removedFields: string[];
+}
+
+/**
+ * Result from update_sections operation
+ */
+export interface UpdateSectionsResult {
+	success: boolean;
+	path: string;
+	versionId: string;
+	modified: number;
+	sectionsUpdated: number;
+}
+
+/**
+ * Result from create_note operation
+ */
+export interface CreateNoteResult {
+	success: boolean;
+	path: string;
+	versionId: string;
+	created: number;
+	renamed?: boolean;
+	originalPath?: string;
+}
+
+/**
+ * Result from rename_file operation
+ */
+export interface RenameFileResult {
+	success: boolean;
+	oldPath: string;
+	newPath: string;
+	linksUpdated: number;
+	affectedFiles: string[];
+	versionId: string;
+}
+
+/**
+ * Result from delete_note operation
+ */
+export interface DeleteNoteResult {
+	deleted: boolean;
+	path: string;
+	destination?: string;
+	dryRun: boolean;
+	soft: boolean;
+}

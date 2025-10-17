@@ -134,6 +134,69 @@ export class FrontmatterUtils {
 	}
 
 	/**
+	 * Serialize frontmatter object to YAML string with delimiters
+	 * Returns the complete frontmatter block including --- delimiters
+	 */
+	static serializeFrontmatter(data: Record<string, any>): string {
+		if (!data || Object.keys(data).length === 0) {
+			return '';
+		}
+
+		const lines: string[] = ['---'];
+		
+		for (const [key, value] of Object.entries(data)) {
+			if (value === undefined || value === null) {
+				continue;
+			}
+
+			// Handle different value types
+			if (Array.isArray(value)) {
+				// Array format
+				if (value.length === 0) {
+					lines.push(`${key}: []`);
+				} else {
+					lines.push(`${key}:`);
+					for (const item of value) {
+						const itemStr = typeof item === 'string' ? item : JSON.stringify(item);
+						lines.push(`  - ${itemStr}`);
+					}
+				}
+			} else if (typeof value === 'object') {
+				// Object format (nested)
+				lines.push(`${key}:`);
+				for (const [subKey, subValue] of Object.entries(value)) {
+					const subValueStr = typeof subValue === 'string' ? subValue : JSON.stringify(subValue);
+					lines.push(`  ${subKey}: ${subValueStr}`);
+				}
+			} else if (typeof value === 'string') {
+				// String - check if needs quoting
+				const needsQuotes = value.includes(':') || value.includes('#') || 
+									value.includes('[') || value.includes(']') ||
+									value.includes('{') || value.includes('}') ||
+									value.includes('|') || value.includes('>') ||
+									value.startsWith(' ') || value.endsWith(' ');
+				
+				if (needsQuotes) {
+					// Escape quotes in the string
+					const escaped = value.replace(/"/g, '\\"');
+					lines.push(`${key}: "${escaped}"`);
+				} else {
+					lines.push(`${key}: ${value}`);
+				}
+			} else if (typeof value === 'number' || typeof value === 'boolean') {
+				// Number or boolean - direct serialization
+				lines.push(`${key}: ${value}`);
+			} else {
+				// Fallback to JSON stringification
+				lines.push(`${key}: ${JSON.stringify(value)}`);
+			}
+		}
+		
+		lines.push('---');
+		return lines.join('\n');
+	}
+
+	/**
 	 * Parse Excalidraw file metadata
 	 * Excalidraw files are JSON with special structure
 	 */
