@@ -2,6 +2,92 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [2.1.0] - 2025-10-16
+
+### ✨ Phase 3: Discovery Endpoints
+
+This release adds new tools for exploring vault structure and testing path validity.
+
+#### Added
+
+**New Tools**
+- `stat` - Get detailed metadata for a file or folder at a specific path
+  - Returns existence status, kind (file/directory), and full metadata
+  - Includes size, dates, child count, etc.
+  - More detailed than `exists()` but slightly slower
+- `exists` - Quickly check if a file or folder exists
+  - Fast path validation without fetching full metadata
+  - Returns existence status and kind only
+  - Optimized for quick existence checks
+
+**Type Definitions (`src/types/mcp-types.ts`)**
+- `StatResult` - Structured result for stat operations (path, exists, kind, metadata)
+- `ExistsResult` - Structured result for exists operations (path, exists, kind)
+
+**Implementation (`src/tools/vault-tools.ts`)**
+- `stat(path)` method - Comprehensive path metadata retrieval
+- `exists(path)` method - Fast existence checking
+- Both methods use PathUtils for consistent path normalization
+- Both methods validate paths and return structured JSON
+
+**Tool Registry (`src/tools/index.ts`)**
+- Registered `stat` and `exists` tools with complete schemas
+- Added call handlers for both new tools
+- Comprehensive descriptions for AI agent usage
+
+#### Use Cases
+
+**`stat` Tool:**
+- Verify a path exists before operations
+- Get detailed file/folder information
+- Check file sizes and modification dates
+- Determine if a path is a file or directory
+
+**`exists` Tool:**
+- Quick existence checks before create operations
+- Validate paths in batch operations
+- Fast pre-flight checks
+- Minimal overhead for simple validation
+
+#### Example Responses
+
+**stat (file exists):**
+```json
+{
+  "path": "folder/note.md",
+  "exists": true,
+  "kind": "file",
+  "metadata": {
+    "kind": "file",
+    "name": "note.md",
+    "path": "folder/note.md",
+    "extension": "md",
+    "size": 1234,
+    "modified": 1697500800000,
+    "created": 1697400000000
+  }
+}
+```
+
+**exists (folder exists):**
+```json
+{
+  "path": "projects",
+  "exists": true,
+  "kind": "directory"
+}
+```
+
+**stat (path doesn't exist):**
+```json
+{
+  "path": "missing/file.md",
+  "exists": false
+}
+```
+
+---
+
 ## [2.0.0] - 2025-10-16
 
 ### 🔧 Phase 2.1: Post-Testing Fixes

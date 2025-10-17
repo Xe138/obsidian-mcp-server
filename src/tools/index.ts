@@ -116,6 +116,34 @@ export class ToolRegistry {
 						}
 					}
 				}
+			},
+			{
+				name: "stat",
+				description: "Get detailed metadata for a file or folder at a specific path. Returns existence status, kind (file or directory), and full metadata including size, dates, etc. Use this to check if a path exists and get its properties. More detailed than exists() but slightly slower. Returns structured JSON with path, exists boolean, kind, and metadata object.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to check (e.g., 'folder/note.md' or 'projects'). Can be a file or folder. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						}
+					},
+					required: ["path"]
+				}
+			},
+			{
+				name: "exists",
+				description: "Quickly check if a file or folder exists at a specific path. Returns existence status and kind (file or directory) without fetching full metadata. Faster than stat() when you only need to verify existence. Use this before operations that require a path to exist. Returns structured JSON with path, exists boolean, and optional kind.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to check (e.g., 'folder/note.md' or 'projects'). Can be a file or folder. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						}
+					},
+					required: ["path"]
+				}
 			}
 		];
 	}
@@ -137,6 +165,10 @@ export class ToolRegistry {
 					return await this.vaultTools.getVaultInfo();
 				case "list_notes":
 					return await this.vaultTools.listNotes(args.path);
+				case "stat":
+					return await this.vaultTools.stat(args.path);
+				case "exists":
+					return await this.vaultTools.exists(args.path);
 				default:
 					return {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],

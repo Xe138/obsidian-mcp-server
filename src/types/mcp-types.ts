@@ -107,3 +107,17 @@ export interface SearchResult {
 	filesSearched: number;
 	filesWithMatches: number;
 }
+
+// Phase 3: Discovery Endpoint Types
+export interface StatResult {
+	path: string;
+	exists: boolean;
+	kind?: ItemKind;
+	metadata?: FileMetadata | DirectoryMetadata;
+}
+
+export interface ExistsResult {
+	path: string;
+	exists: boolean;
+	kind?: ItemKind;
+}

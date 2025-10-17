@@ -48,7 +48,7 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P0** | Enhanced Authentication | 2-3 days | ✅ Complete |
 | **P1** | API Unification | 2-3 days | ✅ Complete |
 | **P1** | Typed Results | 1-2 days | ✅ Complete |
-| **P1** | Discovery Endpoints | 2-3 days | ⏳ Pending |
+| **P1** | Discovery Endpoints | 2-3 days | ✅ Complete |
 | **P1** | Write Operations & Concurrency | 5-6 days | ⏳ Pending |
 | **P2** | List Ergonomics | 3-4 days | ⏳ Pending |
 | **P2** | Enhanced Search | 4-5 days | ⏳ Pending |
@@ -57,8 +57,8 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
 
 **Total Estimated Effort:** 29.5-42.5 days  
-**Completed:** 5.5-8.5 days (Phase 1.1-1.5, Phase 2)  
-**Remaining:** 24-34 days
+**Completed:** 7.5-11.5 days (Phase 1.1-1.5, Phase 2, Phase 3)  
+**Remaining:** 22-31 days
 
 ---
 
@@ -404,7 +404,8 @@ export interface SearchResult {
 
 **Priority:** P1  
 **Dependencies:** Phase 1, Phase 2  
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 2-3 days  
+**Status:** ✅ Complete
 
 ### Goals
 
@@ -414,9 +415,9 @@ Add endpoints for exploring vault structure and testing path validity.
 
 #### 3.1 Implement `stat` Tool
 
-- [ ] Add `stat` tool to `handleListTools()`
-- [ ] Implement `stat(path)` method
-- [ ] Return existence, kind, and metadata
+- [x] Add `stat` tool to `handleListTools()`
+- [x] Implement `stat(path)` method
+- [x] Return existence, kind, and metadata
 
 **Tool Schema:**
 ```typescript
@@ -440,9 +441,9 @@ Add endpoints for exploring vault structure and testing path validity.
 
 #### 3.2 Implement `exists` Tool
 
-- [ ] Add `exists` tool to `handleListTools()`
-- [ ] Implement fast path validation
-- [ ] Return boolean result
+- [x] Add `exists` tool to `handleListTools()`
+- [x] Implement fast path validation
+- [x] Return boolean result
 
 **Tool Schema:**
 ```typescript
@@ -463,9 +464,9 @@ Add endpoints for exploring vault structure and testing path validity.
 
 #### 3.3 Testing
 
-- [ ] Test `stat` on files, folders, and non-existent paths
-- [ ] Test `exists` with various path formats
-- [ ] Verify performance of `exists` vs `stat`
+- [x] Test `stat` on files, folders, and non-existent paths
+- [x] Test `exists` with various path formats
+- [x] Verify performance of `exists` vs `stat`
 
 ---
 

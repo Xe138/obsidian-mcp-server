@@ -1,5 +1,5 @@
 import { App, TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 
@@ -237,6 +237,121 @@ export class VaultTools {
 			path: folder.path,
 			childrenCount: childrenCount,
 			modified: modified
+		};
+	}
+
+	// Phase 3: Discovery Endpoints
+	async stat(path: string): Promise<CallToolResult> {
+		// Validate path
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		// Normalize the path
+		const normalizedPath = PathUtils.normalizePath(path);
+
+		// Check if it's a file
+		const file = PathUtils.resolveFile(this.app, normalizedPath);
+		if (file) {
+			const result: StatResult = {
+				path: normalizedPath,
+				exists: true,
+				kind: "file",
+				metadata: this.createFileMetadata(file)
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
+		// Check if it's a folder
+		const folder = PathUtils.resolveFolder(this.app, normalizedPath);
+		if (folder) {
+			const result: StatResult = {
+				path: normalizedPath,
+				exists: true,
+				kind: "directory",
+				metadata: this.createDirectoryMetadata(folder)
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
+		// Path doesn't exist
+		const result: StatResult = {
+			path: normalizedPath,
+			exists: false
+		};
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify(result, null, 2)
+			}]
+		};
+	}
+
+	async exists(path: string): Promise<CallToolResult> {
+		// Validate path
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		// Normalize the path
+		const normalizedPath = PathUtils.normalizePath(path);
+
+		// Check if it's a file
+		if (PathUtils.fileExists(this.app, normalizedPath)) {
+			const result: ExistsResult = {
+				path: normalizedPath,
+				exists: true,
+				kind: "file"
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
+		// Check if it's a folder
+		if (PathUtils.folderExists(this.app, normalizedPath)) {
+			const result: ExistsResult = {
+				path: normalizedPath,
+				exists: true,
+				kind: "directory"
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
+		// Path doesn't exist
+		const result: ExistsResult = {
+			path: normalizedPath,
+			exists: false
+		};
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify(result, null, 2)
+			}]
 		};
 	}
 }
