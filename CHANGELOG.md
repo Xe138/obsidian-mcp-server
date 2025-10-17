@@ -2,6 +2,105 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [4.0.0] - 2025-10-16
+
+### 🚀 Phase 5: Advanced Read Operations
+
+This release adds frontmatter parsing capabilities to `read_note` and introduces specialized support for Excalidraw files. All features have been manually tested and refined based on user feedback.
+
+#### Added
+
+**Enhanced Tool: `read_note`**
+- **Frontmatter parsing** - New `parseFrontmatter` option to separate frontmatter from content
+- **Structured response** - Returns `ParsedNote` object with parsed YAML frontmatter
+- **Flexible options**:
+  - `withFrontmatter` (default: true) - Include frontmatter in response
+  - `withContent` (default: true) - Include full content in response
+  - `parseFrontmatter` (default: false) - Parse and structure frontmatter
+- **Backward compatible** - Default behavior unchanged (returns raw content)
+- Returns structured JSON when `parseFrontmatter: true` with:
+  - `path` - File path
+  - `hasFrontmatter` - Boolean indicating presence
+  - `frontmatter` - Raw YAML string
+  - `parsedFrontmatter` - Parsed YAML object
+  - `content` - Full file content
+  - `contentWithoutFrontmatter` - Content excluding frontmatter
+
+**New Tool: `read_excalidraw`**
+- Specialized tool for reading Excalidraw drawing files
+- **Metadata extraction** - Element count, compressed data status
+- **Preview text** - Extract text elements without parsing full drawing
+- **Optional compressed data** - Include full drawing data with `includeCompressed: true`
+- Returns structured `ExcalidrawMetadata` with:
+  - `path` - File path
+  - `isExcalidraw` - Validation boolean
+  - `elementCount` - Number of drawing elements
+  - `hasCompressedData` - Boolean for compressed files
+  - `metadata` - Drawing metadata (appState, version)
+  - `preview` - Text elements preview (optional)
+  - `compressedData` - Full drawing data (optional)
+
+**New Utilities (`src/utils/frontmatter-utils.ts`)**
+- `FrontmatterUtils` class for YAML parsing
+- `extractFrontmatter()` - Extract and parse YAML frontmatter using Obsidian's parseYaml
+- `extractFrontmatterSummary()` - Extract common fields (title, tags, aliases)
+- `hasFrontmatter()` - Quick check for frontmatter presence
+- `parseExcalidrawMetadata()` - Parse Excalidraw file structure
+- Handles edge cases: no frontmatter, malformed YAML, invalid Excalidraw files
+
+**Type Definitions (`src/types/mcp-types.ts`)**
+- `ParsedNote` - Structured note with separated frontmatter
+- `ExcalidrawMetadata` - Excalidraw file metadata structure
+
+**Implementation (`src/tools/note-tools.ts`)**
+- Enhanced `readNote()` method with options parameter
+- New `readExcalidraw()` method for Excalidraw files
+- Integrated frontmatter parsing with FrontmatterUtils
+- Maintains backward compatibility for existing clients
+
+**Tool Registry (`src/tools/index.ts`)**
+- Updated `read_note` schema with new optional parameters
+- Registered `read_excalidraw` tool with comprehensive schema
+- Updated callTool to pass options to readNote and handle read_excalidraw
+
+#### Improvements (Post-Testing)
+
+- **Enhanced error handling** - Graceful handling of non-Excalidraw files with structured responses
+- **Comprehensive documentation** - Detailed field descriptions in tool schema with explicit categorization
+- **Full metadata exposure** - All Excalidraw metadata fields properly exposed per spec:
+  - `elementCount` - Number of drawing elements (always returned)
+  - `hasCompressedData` - Boolean for embedded images (always returned)
+  - `metadata` - Object with appState and version (always returned)
+  - `preview` - Text elements (conditional on includePreview)
+  - `compressedData` - Full drawing data (conditional on includeCompressed)
+- **Enhanced type definitions** - JSDoc comments on all ExcalidrawMetadata fields
+- **Complete specification** - New EXCALIDRAW_METADATA_SPEC.md with comprehensive documentation
+
+#### Bug Fixes (Post-Testing)
+
+- **Fixed missing metadata fields** - Resolved issue where `elementCount`, `hasCompressedData`, and `metadata` were not returned
+  - Added support for `compressed-json` code fence format (Excalidraw's actual format)
+  - Detects compressed (base64) vs uncompressed JSON data
+  - For compressed files: Returns `hasCompressedData: true` and `metadata.compressed: true`
+  - For uncompressed files: Extracts actual element count and metadata
+  - Multiple regex patterns to handle different Excalidraw formats
+  - Always return metadata fields with appropriate values
+- **Known Limitation:** `elementCount` returns 0 for compressed files
+  - Most Excalidraw files use compressed base64 format by default
+  - Decompression would require pako library (not included to minimize dependencies)
+  - Text elements are still extracted in `preview` field
+  - Use `hasCompressedData: true` to identify compressed files
+  - This is expected behavior, not a bug
+
+#### Benefits
+
+- **Better frontmatter handling** - Separate frontmatter from content for easier processing
+- **Excalidraw support** - First-class support for Excalidraw drawings with complete metadata
+- **Flexible reading** - Choose what data to include in responses
+- **Backward compatible** - Existing code continues to work unchanged
+- **Type-safe** - Structured responses with proper TypeScript types
+- **Robust** - Graceful error handling for edge cases
+
 ## [3.0.0] - 2025-10-16
 
 ### 🚀 Phase 4: Enhanced List Operations

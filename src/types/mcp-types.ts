@@ -140,3 +140,38 @@ export interface ListResult {
 	hasMore: boolean;
 	nextCursor?: string;
 }
+
+// Phase 5: Advanced Read Operations Types
+export interface ParsedNote {
+	path: string;
+	hasFrontmatter: boolean;
+	frontmatter?: string;
+	parsedFrontmatter?: Record<string, any>;
+	content: string;
+	contentWithoutFrontmatter?: string;
+}
+
+/**
+ * Excalidraw drawing file metadata
+ * Returned by read_excalidraw tool
+ */
+export interface ExcalidrawMetadata {
+	/** File path */
+	path: string;
+	/** True if file is a valid Excalidraw drawing */
+	isExcalidraw: boolean;
+	/** Number of drawing elements (shapes, text, etc.) */
+	elementCount?: number;
+	/** True if drawing contains compressed/embedded image data */
+	hasCompressedData?: boolean;
+	/** Drawing metadata including appState and version */
+	metadata?: {
+		appState?: Record<string, any>;
+		version?: number;
+		[key: string]: any;
+	};
+	/** Preview text extracted from text elements section (when includePreview=true) */
+	preview?: string;
+	/** Full compressed drawing data (when includeCompressed=true) */
+	compressedData?: string;
+}

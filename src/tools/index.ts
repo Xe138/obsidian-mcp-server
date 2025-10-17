@@ -16,13 +16,25 @@ export class ToolRegistry {
 		return [
 			{
 				name: "read_note",
-				description: "Read the content of a file from the Obsidian vault. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list_notes() first if you're unsure of the exact path. This only works on files, not folders.",
+				description: "Read the content of a file from the Obsidian vault with optional frontmatter parsing. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list() first if you're unsure of the exact path. This only works on files, not folders. By default returns raw content. Set parseFrontmatter to true to get structured data with separated frontmatter and content.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
 							description: "Vault-relative path to the file (e.g., 'folder/note.md' or 'daily/2024-10-16.md'). Must include file extension. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						withFrontmatter: {
+							type: "boolean",
+							description: "If true (default), include frontmatter in the response when parseFrontmatter is true. Only applies when parseFrontmatter is true."
+						},
+						withContent: {
+							type: "boolean",
+							description: "If true (default), include full content in the response. Set to false to get only metadata when parseFrontmatter is true."
+						},
+						parseFrontmatter: {
+							type: "boolean",
+							description: "If true, parse and separate frontmatter from content, returning structured JSON. If false (default), return raw file content as plain text. Use true when you need to work with frontmatter separately."
 						}
 					},
 					required: ["path"]
@@ -175,6 +187,28 @@ export class ToolRegistry {
 					},
 					required: ["path"]
 				}
+			},
+			{
+				name: "read_excalidraw",
+				description: "Read an Excalidraw drawing file with specialized metadata extraction. Returns structured ExcalidrawMetadata JSON object. ALWAYS RETURNED FIELDS: 'path' (string: file path), 'isExcalidraw' (boolean: true if valid Excalidraw file), 'elementCount' (number: count of drawing elements - NOTE: returns 0 for compressed files which is most Excalidraw files, only uncompressed files return actual count), 'hasCompressedData' (boolean: true if drawing uses compressed format), 'metadata' (object: contains appState, version, and compressed flag). CONDITIONAL FIELDS: 'preview' (string: text elements from Text Elements section, included when includePreview=true which is default), 'compressedData' (string: full file content including compressed drawing data, included only when includeCompressed=true). Gracefully handles non-Excalidraw files by returning isExcalidraw=false with helpful message. Use this for .excalidraw.md files to get drawing information. Most files use compressed format so elementCount will be 0 but hasCompressedData will be true.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						path: {
+							type: "string",
+							description: "Vault-relative path to the Excalidraw file (e.g., 'drawings/diagram.excalidraw.md'). Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						includeCompressed: {
+							type: "boolean",
+							description: "If true, include the full compressed drawing data in 'compressedData' field. Default: false. Warning: can be very large for complex drawings with embedded images. Set to true only when you need the complete drawing JSON data for processing or export."
+						},
+						includePreview: {
+							type: "boolean",
+							description: "If true (default), include preview text in 'preview' field extracted from the drawing's text elements section. Set to false to omit preview and reduce response size. Useful for getting a text summary of the drawing without the full data."
+						}
+					},
+					required: ["path"]
+				}
 			}
 		];
 	}
@@ -183,7 +217,11 @@ export class ToolRegistry {
 		try {
 			switch (name) {
 				case "read_note":
-					return await this.noteTools.readNote(args.path);
+					return await this.noteTools.readNote(args.path, {
+						withFrontmatter: args.withFrontmatter,
+						withContent: args.withContent,
+						parseFrontmatter: args.parseFrontmatter
+					});
 				case "create_note":
 					return await this.noteTools.createNote(args.path, args.content, args.createParents ?? false);
 				case "update_note":
@@ -209,6 +247,11 @@ export class ToolRegistry {
 					return await this.vaultTools.stat(args.path);
 				case "exists":
 					return await this.vaultTools.exists(args.path);
+				case "read_excalidraw":
+					return await this.noteTools.readExcalidraw(args.path, {
+						includeCompressed: args.includeCompressed,
+						includePreview: args.includePreview
+					});
 				default:
 					return {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],

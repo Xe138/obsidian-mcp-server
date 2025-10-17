@@ -1,12 +1,25 @@
 import { App, TFile } from 'obsidian';
-import { CallToolResult } from '../types/mcp-types';
+import { CallToolResult, ParsedNote, ExcalidrawMetadata } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
+import { FrontmatterUtils } from '../utils/frontmatter-utils';
 
 export class NoteTools {
 	constructor(private app: App) {}
 
-	async readNote(path: string): Promise<CallToolResult> {
+	async readNote(
+		path: string,
+		options?: {
+			withFrontmatter?: boolean;
+			withContent?: boolean;
+			parseFrontmatter?: boolean;
+		}
+	): Promise<CallToolResult> {
+		// Default options
+		const withFrontmatter = options?.withFrontmatter ?? true;
+		const withContent = options?.withContent ?? true;
+		const parseFrontmatter = options?.parseFrontmatter ?? false;
+
 		// Validate path
 		if (!path || path.trim() === '') {
 			return {
@@ -42,8 +55,36 @@ export class NoteTools {
 
 		try {
 			const content = await this.app.vault.read(file);
+
+			// If no special options, return simple content
+			if (!parseFrontmatter) {
+				return {
+					content: [{ type: "text", text: content }]
+				};
+			}
+
+			// Parse frontmatter if requested
+			const extracted = FrontmatterUtils.extractFrontmatter(content);
+
+			const result: ParsedNote = {
+				path: file.path,
+				hasFrontmatter: extracted.hasFrontmatter,
+				content: withContent ? content : ''
+			};
+
+			// Include frontmatter if requested
+			if (withFrontmatter && extracted.hasFrontmatter) {
+				result.frontmatter = extracted.frontmatter;
+				result.parsedFrontmatter = extracted.parsedFrontmatter || undefined;
+			}
+
+			// Include content without frontmatter if parsing
+			if (withContent && extracted.hasFrontmatter) {
+				result.contentWithoutFrontmatter = extracted.contentWithoutFrontmatter;
+			}
+
 			return {
-				content: [{ type: "text", text: content }]
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
 			};
 		} catch (error) {
 			return {
@@ -243,6 +284,109 @@ export class NoteTools {
 		} catch (error) {
 			return {
 				content: [{ type: "text", text: ErrorMessages.operationFailed('delete note', path, (error as Error).message) }],
+				isError: true
+			};
+		}
+	}
+
+	async readExcalidraw(
+		path: string,
+		options?: {
+			includeCompressed?: boolean;
+			includePreview?: boolean;
+		}
+	): Promise<CallToolResult> {
+		// Default options
+		const includeCompressed = options?.includeCompressed ?? false;
+		const includePreview = options?.includePreview ?? true;
+
+		// Validate path
+		if (!path || path.trim() === '') {
+			return {
+				content: [{ type: "text", text: ErrorMessages.emptyPath() }],
+				isError: true
+			};
+		}
+
+		if (!PathUtils.isValidVaultPath(path)) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+				isError: true
+			};
+		}
+
+		// Resolve file using path utilities
+		const file = PathUtils.resolveFile(this.app, path);
+		
+		if (!file) {
+			// Check if it's a folder instead
+			if (PathUtils.folderExists(this.app, path)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFile(path) }],
+					isError: true
+				};
+			}
+			
+			return {
+				content: [{ type: "text", text: ErrorMessages.fileNotFound(path) }],
+				isError: true
+			};
+		}
+
+		try {
+			const content = await this.app.vault.read(file);
+
+			// Parse Excalidraw metadata (gracefully handles malformed files)
+			const metadata = FrontmatterUtils.parseExcalidrawMetadata(content);
+
+			if (!metadata.isExcalidraw) {
+				// Return structured response for non-Excalidraw files
+				const result: ExcalidrawMetadata = {
+					path: file.path,
+					isExcalidraw: false
+				};
+				return {
+					content: [{ 
+						type: "text", 
+						text: JSON.stringify({
+							...result,
+							message: `File is not an Excalidraw drawing. The file does not contain Excalidraw plugin markers. Use read_note instead for regular markdown files.`
+						}, null, 2)
+					}]
+				};
+			}
+
+			// Build result with all core metadata fields (always returned)
+			const result: ExcalidrawMetadata = {
+				path: file.path,
+				isExcalidraw: metadata.isExcalidraw,
+				elementCount: metadata.elementCount, // Number of drawing elements
+				hasCompressedData: metadata.hasCompressedData, // Boolean for embedded images
+				metadata: metadata.metadata // Object with appState and version
+			};
+
+			// Include preview if requested (extract text elements)
+			if (includePreview) {
+				// Extract text before the Drawing section
+				const drawingIndex = content.indexOf('## Drawing');
+				if (drawingIndex > 0) {
+					const previewText = content.substring(0, drawingIndex).trim();
+					// Remove the "# Text Elements" header if present
+					result.preview = previewText.replace(/^#\s*Text Elements\s*\n+/, '').trim();
+				}
+			}
+
+			// Include compressed data if requested (full content)
+			if (includeCompressed) {
+				result.compressedData = content;
+			}
+
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+			};
+		} catch (error) {
+			return {
+				content: [{ type: "text", text: ErrorMessages.operationFailed('read excalidraw', path, (error as Error).message) }],
 				isError: true
 			};
 		}
