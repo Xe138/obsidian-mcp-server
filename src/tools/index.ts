@@ -2,14 +2,23 @@ import { App } from 'obsidian';
 import { Tool, CallToolResult } from '../types/mcp-types';
 import { NoteTools } from './note-tools';
 import { VaultTools } from './vault-tools';
+import { NotificationManager } from '../ui/notifications';
 
 export class ToolRegistry {
 	private noteTools: NoteTools;
 	private vaultTools: VaultTools;
+	private notificationManager: NotificationManager | null = null;
 
 	constructor(app: App) {
 		this.noteTools = new NoteTools(app);
 		this.vaultTools = new VaultTools(app);
+	}
+
+	/**
+	 * Set notification manager for tool call notifications
+	 */
+	setNotificationManager(manager: NotificationManager | null): void {
+		this.notificationManager = manager;
 	}
 
 	getToolDefinitions(): Tool[] {
@@ -444,52 +453,68 @@ export class ToolRegistry {
 	}
 
 	async callTool(name: string, args: any): Promise<CallToolResult> {
+		const startTime = Date.now();
+		
+		// Show tool call notification
+		if (this.notificationManager) {
+			this.notificationManager.showToolCall(name, args);
+		}
+
 		try {
+			let result: CallToolResult;
+			
 			switch (name) {
 				case "read_note":
-					return await this.noteTools.readNote(args.path, {
+					result = await this.noteTools.readNote(args.path, {
 						withFrontmatter: args.withFrontmatter,
 						withContent: args.withContent,
 						parseFrontmatter: args.parseFrontmatter
 					});
+					break;
 				case "create_note":
-					return await this.noteTools.createNote(
+					result = await this.noteTools.createNote(
 						args.path, 
 						args.content, 
 						args.createParents ?? false,
 						args.onConflict ?? 'error'
 					);
+					break;
 				case "update_note":
-					return await this.noteTools.updateNote(args.path, args.content);
+					result = await this.noteTools.updateNote(args.path, args.content);
+					break;
 				case "update_frontmatter":
-					return await this.noteTools.updateFrontmatter(
+					result = await this.noteTools.updateFrontmatter(
 						args.path,
 						args.patch,
 						args.remove ?? [],
 						args.ifMatch
 					);
+					break;
 				case "update_sections":
-					return await this.noteTools.updateSections(
+					result = await this.noteTools.updateSections(
 						args.path,
 						args.edits,
 						args.ifMatch
 					);
+					break;
 				case "rename_file":
-					return await this.noteTools.renameFile(
+					result = await this.noteTools.renameFile(
 						args.path,
 						args.newPath,
 						args.updateLinks ?? true,
 						args.ifMatch
 					);
+					break;
 				case "delete_note":
-					return await this.noteTools.deleteNote(
+					result = await this.noteTools.deleteNote(
 						args.path,
 						args.soft ?? true,
 						args.dryRun ?? false,
 						args.ifMatch
 					);
+					break;
 				case "search":
-					return await this.vaultTools.search({
+					result = await this.vaultTools.search({
 						query: args.query,
 						isRegex: args.isRegex,
 						caseSensitive: args.caseSensitive,
@@ -500,12 +525,15 @@ export class ToolRegistry {
 						snippetLength: args.snippetLength,
 						maxResults: args.maxResults
 					});
+					break;
 				case "search_waypoints":
-					return await this.vaultTools.searchWaypoints(args.folder);
+					result = await this.vaultTools.searchWaypoints(args.folder);
+					break;
 				case "get_vault_info":
-					return await this.vaultTools.getVaultInfo();
+					result = await this.vaultTools.getVaultInfo();
+					break;
 				case "list":
-					return await this.vaultTools.list({
+					result = await this.vaultTools.list({
 						path: args.path,
 						recursive: args.recursive,
 						includes: args.includes,
@@ -515,38 +543,76 @@ export class ToolRegistry {
 						cursor: args.cursor,
 						withFrontmatterSummary: args.withFrontmatterSummary
 					});
+					break;
 				case "stat":
-					return await this.vaultTools.stat(args.path);
+					result = await this.vaultTools.stat(args.path);
+					break;
 				case "exists":
-					return await this.vaultTools.exists(args.path);
+					result = await this.vaultTools.exists(args.path);
+					break;
 				case "read_excalidraw":
-					return await this.noteTools.readExcalidraw(args.path, {
+					result = await this.noteTools.readExcalidraw(args.path, {
 						includeCompressed: args.includeCompressed,
 						includePreview: args.includePreview
 					});
+					break;
 				case "get_folder_waypoint":
-					return await this.vaultTools.getFolderWaypoint(args.path);
+					result = await this.vaultTools.getFolderWaypoint(args.path);
+					break;
 				case "is_folder_note":
-					return await this.vaultTools.isFolderNote(args.path);
+					result = await this.vaultTools.isFolderNote(args.path);
+					break;
 				case "validate_wikilinks":
-					return await this.vaultTools.validateWikilinks(args.path);
+					result = await this.vaultTools.validateWikilinks(args.path);
+					break;
 				case "resolve_wikilink":
-					return await this.vaultTools.resolveWikilink(args.sourcePath, args.linkText);
+					result = await this.vaultTools.resolveWikilink(args.sourcePath, args.linkText);
+					break;
 				case "backlinks":
-					return await this.vaultTools.getBacklinks(
+					result = await this.vaultTools.getBacklinks(
 						args.path,
 						args.includeUnlinked ?? false,
 						args.includeSnippets ?? true
 					);
+					break;
 				default:
-					return {
+					result = {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],
 						isError: true
 					};
 			}
+
+			// Add to history (no completion notification)
+			const duration = Date.now() - startTime;
+			if (this.notificationManager) {
+				this.notificationManager.addToHistory({
+					timestamp: Date.now(),
+					toolName: name,
+					args: args,
+					success: !result.isError,
+					duration: duration
+				});
+			}
+
+			return result;
 		} catch (error) {
+			const duration = Date.now() - startTime;
+			const errorMessage = (error as Error).message;
+
+			// Add to history (no error notification shown)
+			if (this.notificationManager) {
+				this.notificationManager.addToHistory({
+					timestamp: Date.now(),
+					toolName: name,
+					args: args,
+					success: false,
+					duration: duration,
+					error: errorMessage
+				});
+			}
+
 			return {
-				content: [{ type: "text", text: `Error: ${(error as Error).message}` }],
+				content: [{ type: "text", text: `Error: ${errorMessage}` }],
 				isError: true
 			};
 		}

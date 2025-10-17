@@ -2,6 +2,88 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [9.0.0] - 2025-10-17
+
+### 🎨 Phase 10: UI Notifications
+
+This release adds visual feedback for MCP tool calls with configurable notifications in the Obsidian UI. Provides transparency into API activity, easier debugging, and optional notification history tracking.
+
+#### Added
+
+**Notification System**
+- Real-time notifications for MCP tool calls displayed in Obsidian UI
+- Shows notification when tool is called (request only, no completion notifications)
+- Configurable notification duration (default: 3 seconds)
+- Rate limiting (max 10 notifications/second) to prevent UI spam
+- Simple on/off toggle - no verbosity levels needed
+- Tool-specific icons for visual clarity:
+  - 📖 Read operations (`read_note`, `read_excalidraw`)
+  - ✏️ Write operations (`create_note`, `update_note`, `update_frontmatter`, `update_sections`)
+  - 🗑️ Delete operations (`delete_note`)
+  - 📝 Rename operations (`rename_file`)
+  - 🔍 Search operations (`search`, `search_waypoints`)
+  - 📋 List operations (`list`)
+  - 📊 Stat operations (`stat`, `exists`)
+  - ℹ️ Info operations (`get_vault_info`)
+  - 🗺️ Waypoint operations (`get_folder_waypoint`)
+  - 📁 Folder operations (`is_folder_note`)
+  - 🔗 Link operations (`validate_wikilinks`, `resolve_wikilink`, `backlinks`)
+
+**Notification Settings**
+- `Enable notifications` - Toggle notifications on/off
+- `Show parameters` - Include tool parameters in notifications (truncated for readability)
+- `Notification duration` - How long notifications stay visible (milliseconds)
+- `Log to console` - Also log tool calls to browser console for debugging
+- All settings available in plugin settings UI under "UI Notifications" section
+
+**Notification History**
+- Stores last 100 tool calls in memory
+- View history via command palette: "View MCP Notification History"
+- View history via settings: "View History" button
+- History modal features:
+  - Filter by tool name
+  - Filter by type (all/success/error)
+  - Shows timestamp, duration, parameters, and error messages
+  - Export history to clipboard as JSON
+  - Clear history button
+- Each history entry includes:
+  - `timestamp` - When the tool was called
+  - `toolName` - Name of the tool
+  - `args` - Tool parameters
+  - `success` - Whether the call succeeded
+  - `duration` - Execution time in milliseconds
+  - `error` - Error message (if failed)
+
+**Notification Example**
+- Tool call: `🔧 MCP: list({ path: "projects", recursive: true })`
+- Note: Only request notifications are shown, not completion or error notifications
+
+**Implementation Details**
+- Non-blocking notification display (async queue)
+- Notification queue with rate limiting to prevent UI freezing
+- Parameter truncation for long values (max 50 chars)
+- Privacy-aware: sensitive data not shown in notifications
+- Zero performance impact when disabled
+- Integrates seamlessly with existing tool call flow
+
+#### Files Added
+- `src/ui/notifications.ts` - Notification manager with rate limiting
+- `src/ui/notification-history.ts` - History modal for viewing past tool calls
+
+#### Files Modified
+- `src/types/settings-types.ts` - Added notification settings types
+- `src/settings.ts` - Added notification settings UI
+- `src/tools/index.ts` - Integrated notifications into tool call interceptor
+- `src/server/mcp-server.ts` - Added notification manager support
+- `src/main.ts` - Initialize notification manager and add history command
+
+#### Benefits
+- **Developer Experience**: Visual feedback for API activity, easier debugging
+- **User Experience**: Awareness when tools are called, transparency into AI agent actions
+- **Debugging**: See exact parameters, track execution times in history, identify bottlenecks
+- **Optional**: Can be completely disabled for production use
+- **Simple**: Single toggle to enable/disable, no complex verbosity settings
+
 ## [8.0.0] - 2025-10-17
 
 ### 🚀 Phase 9: Linking & Backlinks

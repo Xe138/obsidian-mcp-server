@@ -11,6 +11,7 @@ import {
 } from '../types/mcp-types';
 import { MCPServerSettings } from '../types/settings-types';
 import { ToolRegistry } from '../tools';
+import { NotificationManager } from '../ui/notifications';
 import { setupMiddleware } from './middleware';
 import { setupRoutes } from './routes';
 
@@ -140,5 +141,12 @@ export class MCPServer {
 
 	public updateSettings(settings: MCPServerSettings): void {
 		this.settings = settings;
+	}
+
+	/**
+	 * Set notification manager for tool call notifications
+	 */
+	public setNotificationManager(manager: NotificationManager | null): void {
+		this.toolRegistry.setNotificationManager(manager);
 	}
 }

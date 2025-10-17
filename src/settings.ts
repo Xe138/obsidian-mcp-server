@@ -265,5 +265,81 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			healthEndpoint.style.userSelect = 'all';
 			healthEndpoint.style.cursor = 'text';
 		}
+
+		// Notification Settings
+		containerEl.createEl('h3', {text: 'UI Notifications'});
+		
+		const notifDesc = containerEl.createEl('p', {
+			text: 'Display notifications in Obsidian UI when MCP tools are called. Useful for monitoring API activity and debugging.'
+		});
+		notifDesc.style.fontSize = '0.9em';
+		notifDesc.style.color = 'var(--text-muted)';
+		notifDesc.style.marginBottom = '12px';
+
+		// Enable notifications
+		new Setting(containerEl)
+			.setName('Enable notifications')
+			.setDesc('Show notifications when MCP tools are called (request only, no completion notifications)')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.notificationsEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings.notificationsEnabled = value;
+					await this.plugin.saveSettings();
+					this.plugin.updateNotificationManager();
+					this.display();
+				}));
+
+		// Show notification settings only if enabled
+		if (this.plugin.settings.notificationsEnabled) {
+			// Show parameters
+			new Setting(containerEl)
+				.setName('Show parameters')
+				.setDesc('Include tool parameters in notifications')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.showParameters)
+					.onChange(async (value) => {
+						this.plugin.settings.showParameters = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateNotificationManager();
+					}));
+
+			// Notification duration
+			new Setting(containerEl)
+				.setName('Notification duration')
+				.setDesc('How long notifications stay visible (milliseconds)')
+				.addText(text => text
+					.setPlaceholder('3000')
+					.setValue(String(this.plugin.settings.notificationDuration))
+					.onChange(async (value) => {
+						const duration = parseInt(value);
+						if (!isNaN(duration) && duration > 0) {
+							this.plugin.settings.notificationDuration = duration;
+							await this.plugin.saveSettings();
+							this.plugin.updateNotificationManager();
+						}
+					}));
+
+			// Log to console
+			new Setting(containerEl)
+				.setName('Log to console')
+				.setDesc('Also log tool calls to browser console')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.logToConsole)
+					.onChange(async (value) => {
+						this.plugin.settings.logToConsole = value;
+						await this.plugin.saveSettings();
+						this.plugin.updateNotificationManager();
+					}));
+
+			// View history button
+			new Setting(containerEl)
+				.setName('Notification history')
+				.setDesc('View recent MCP tool calls')
+				.addButton(button => button
+					.setButtonText('View History')
+					.onClick(() => {
+						this.plugin.showNotificationHistory();
+					}));
+		}
 	}
 }

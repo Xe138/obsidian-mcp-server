@@ -7,7 +7,14 @@ export interface MCPServerSettings {
 	enableAuth: boolean;
 }
 
-export interface MCPPluginSettings extends MCPServerSettings {
+export interface NotificationSettings {
+	notificationsEnabled: boolean;
+	showParameters: boolean;
+	notificationDuration: number; // milliseconds
+	logToConsole: boolean;
+}
+
+export interface MCPPluginSettings extends MCPServerSettings, NotificationSettings {
 	autoStart: boolean;
 }
 
@@ -17,5 +24,10 @@ export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	allowedOrigins: ['*'],
 	apiKey: '',
 	enableAuth: false,
-	autoStart: false
+	autoStart: false,
+	// Notification defaults
+	notificationsEnabled: false,
+	showParameters: false,
+	notificationDuration: 3000,
+	logToConsole: false
 };

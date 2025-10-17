@@ -2,14 +2,20 @@ import { Notice, Plugin } from 'obsidian';
 import { MCPServer } from './server/mcp-server';
 import { MCPPluginSettings, DEFAULT_SETTINGS } from './types/settings-types';
 import { MCPServerSettingTab } from './settings';
+import { NotificationManager } from './ui/notifications';
+import { NotificationHistoryModal } from './ui/notification-history';
 
 export default class MCPServerPlugin extends Plugin {
 	settings!: MCPPluginSettings;
 	mcpServer: MCPServer | null = null;
 	statusBarItem: HTMLElement | null = null;
+	notificationManager: NotificationManager | null = null;
 
 	async onload() {
 		await this.loadSettings();
+
+		// Initialize notification manager
+		this.updateNotificationManager();
 
 		// Add status bar item
 		this.statusBarItem = this.addStatusBarItem();
@@ -47,6 +53,14 @@ export default class MCPServerPlugin extends Plugin {
 			callback: async () => {
 				await this.stopServer();
 				await this.startServer();
+			}
+		});
+
+		this.addCommand({
+			id: 'view-notification-history',
+			name: 'View MCP Notification History',
+			callback: () => {
+				this.showNotificationHistory();
 			}
 		});
 
@@ -125,5 +139,44 @@ export default class MCPServerPlugin extends Plugin {
 		if (this.mcpServer) {
 			this.mcpServer.updateSettings(this.settings);
 		}
+	}
+
+	/**
+	 * Update or create notification manager based on settings
+	 */
+	updateNotificationManager() {
+		if (this.settings.notificationsEnabled) {
+			if (!this.notificationManager) {
+				this.notificationManager = new NotificationManager(this.app, this.settings);
+			} else {
+				this.notificationManager.updateSettings(this.settings);
+			}
+			
+			// Update server's tool registry if server is running
+			if (this.mcpServer) {
+				this.mcpServer.setNotificationManager(this.notificationManager);
+			}
+		} else {
+			this.notificationManager = null;
+			
+			// Clear notification manager from server if running
+			if (this.mcpServer) {
+				this.mcpServer.setNotificationManager(null);
+			}
+		}
+	}
+
+	/**
+	 * Show notification history modal
+	 */
+	showNotificationHistory() {
+		if (!this.notificationManager) {
+			new Notice('Notifications are not enabled. Enable them in settings to view history.');
+			return;
+		}
+
+		const history = this.notificationManager.getHistory();
+		const modal = new NotificationHistoryModal(this.app, history);
+		modal.open();
 	}
 }
