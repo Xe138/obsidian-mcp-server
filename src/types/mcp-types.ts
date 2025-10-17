@@ -121,3 +121,22 @@ export interface ExistsResult {
 	exists: boolean;
 	kind?: ItemKind;
 }
+
+// Phase 4: Enhanced List Operations Types
+export interface FrontmatterSummary {
+	title?: string;
+	tags?: string[];
+	aliases?: string[];
+	[key: string]: any;
+}
+
+export interface FileMetadataWithFrontmatter extends FileMetadata {
+	frontmatterSummary?: FrontmatterSummary;
+}
+
+export interface ListResult {
+	items: Array<FileMetadataWithFrontmatter | DirectoryMetadata>;
+	totalCount: number;
+	hasMore: boolean;
+	nextCursor?: string;
+}

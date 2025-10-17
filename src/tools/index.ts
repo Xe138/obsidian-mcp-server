@@ -105,14 +105,45 @@ export class ToolRegistry {
 				}
 			},
 			{
-				name: "list_notes",
-				description: "List files and directories in the vault or in a specific folder. Returns structured JSON with file metadata (name, path, size, dates) and directory metadata (name, path, child count). Use this to explore vault structure, verify paths exist, or see what files are available. Returns direct children only (non-recursive). Items are sorted with directories first, then files, alphabetically (case-insensitive) within each group.",
+				name: "list",
+				description: "List files and/or directories with advanced filtering, recursion, and pagination. Returns structured JSON with file/directory metadata and optional frontmatter summaries. Supports glob patterns for includes/excludes, recursive traversal, type filtering, and cursor-based pagination. Use this to explore vault structure with fine-grained control.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
-							description: "Optional vault-relative folder path to list items from (e.g., 'projects' or 'daily/2024'). To list root-level items, omit this parameter, use empty string '', or use '.'. Do NOT use leading slashes (e.g., '/' or '/folder') as they are invalid and will cause an error. Paths are case-sensitive on macOS/Linux."
+							description: "Optional vault-relative folder path to list from (e.g., 'projects' or 'daily/2024'). Omit or use empty string for root. Paths are case-sensitive on macOS/Linux."
+						},
+						recursive: {
+							type: "boolean",
+							description: "If true, recursively list all descendants. If false (default), list only direct children."
+						},
+						includes: {
+							type: "array",
+							items: { type: "string" },
+							description: "Glob patterns to include (e.g., ['*.md', 'projects/**']). Supports *, **, ?, [abc], {a,b}. If empty, includes all."
+						},
+						excludes: {
+							type: "array",
+							items: { type: "string" },
+							description: "Glob patterns to exclude (e.g., ['.obsidian/**', '*.tmp']). Takes precedence over includes."
+						},
+						only: {
+							type: "string",
+							enum: ["files", "directories", "any"],
+							description: "Filter by type: 'files' (only files), 'directories' (only folders), 'any' (both, default)."
+						},
+						limit: {
+							type: "number",
+							description: "Maximum number of items to return per page. Use with cursor for pagination."
+						},
+						cursor: {
+							type: "string",
+							description: "Pagination cursor from previous response's nextCursor field. Continue from where the last page ended."
+						},
+						withFrontmatterSummary: {
+							type: "boolean",
+							description: "If true, include parsed frontmatter (title, tags, aliases) for markdown files without reading full content. Default: false."
 						}
 					}
 				}
@@ -163,8 +194,17 @@ export class ToolRegistry {
 					return await this.vaultTools.searchNotes(args.query);
 				case "get_vault_info":
 					return await this.vaultTools.getVaultInfo();
-				case "list_notes":
-					return await this.vaultTools.listNotes(args.path);
+				case "list":
+					return await this.vaultTools.list({
+						path: args.path,
+						recursive: args.recursive,
+						includes: args.includes,
+						excludes: args.excludes,
+						only: args.only,
+						limit: args.limit,
+						cursor: args.cursor,
+						withFrontmatterSummary: args.withFrontmatterSummary
+					});
 				case "stat":
 					return await this.vaultTools.stat(args.path);
 				case "exists":

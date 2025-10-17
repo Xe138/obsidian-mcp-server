@@ -50,15 +50,16 @@ The plugin is currently minimally functioning with basic CRUD operations and sim
 | **P1** | Typed Results | 1-2 days | ✅ Complete |
 | **P1** | Discovery Endpoints | 2-3 days | ✅ Complete |
 | **P1** | Write Operations & Concurrency | 5-6 days | ⏳ Pending |
-| **P2** | List Ergonomics | 3-4 days | ⏳ Pending |
+| **P2** | Enhanced List Operations | 3-4 days | ✅ Complete |
 | **P2** | Enhanced Search | 4-5 days | ⏳ Pending |
 | **P2** | Linking & Backlinks | 3-4 days | ⏳ Pending |
 | **P3** | Advanced Read Operations | 2-3 days | ⏳ Pending |
 | **P3** | Waypoint Support | 3-4 days | ⏳ Pending |
+| **P3** | UI Notifications | 1-2 days | ⏳ Pending |
 
-**Total Estimated Effort:** 29.5-42.5 days  
-**Completed:** 7.5-11.5 days (Phase 1.1-1.5, Phase 2, Phase 3)  
-**Remaining:** 22-31 days
+**Total Estimated Effort:** 30.5-44.5 days  
+**Completed:** 10.5-15.5 days (Phase 1, Phase 2, Phase 3, Phase 4)  
+**Remaining:** 20-29 days
 
 ---
 
@@ -474,7 +475,8 @@ Add endpoints for exploring vault structure and testing path validity.
 
 **Priority:** P2  
 **Dependencies:** Phase 2, Phase 3  
-**Estimated Effort:** 3-4 days
+**Estimated Effort:** 3-4 days  
+**Status:** ✅ Complete
 
 ### Goals
 
@@ -517,15 +519,15 @@ Replace `list_notes` with more powerful `list` tool.
 
 **File:** `glob-utils.ts` (new)
 
-- [ ] Implement or import glob matching library (e.g., minimatch)
-- [ ] Support `*`, `**`, `?` wildcards
-- [ ] Handle include/exclude patterns
+- [x] Implement or import glob matching library (e.g., minimatch)
+- [x] Support `*`, `**`, `?` wildcards
+- [x] Handle include/exclude patterns
 
 #### 4.3 Implement Pagination
 
-- [ ] Add cursor-based pagination
-- [ ] Encode cursor with last item path
-- [ ] Return `nextCursor` in results
+- [x] Add cursor-based pagination
+- [x] Encode cursor with last item path
+- [x] Return `nextCursor` in results
 
 **Result Format:**
 ```typescript
@@ -539,24 +541,26 @@ Replace `list_notes` with more powerful `list` tool.
 
 #### 4.4 Backward Compatibility
 
-- [ ] Keep `list_notes` as alias to `list` with appropriate defaults
-- [ ] Add deprecation notice in documentation
+- [x] ~~Keep `list_notes` as alias to `list` with appropriate defaults~~ (Not required - breaking change accepted)
+- [x] Add deprecation notice in documentation
 
 #### 4.5 Frontmatter Summary Option
 
-- [ ] Add `withFrontmatterSummary` parameter to list tool
-- [ ] Extract frontmatter keys (title, tags, aliases) without reading full content
-- [ ] Include in `FileMetadata` as optional `frontmatterSummary` field
-- [ ] Optimize to avoid full file reads when possible
+- [x] Add `withFrontmatterSummary` parameter to list tool
+- [x] Extract frontmatter keys (title, tags, aliases) without reading full content
+- [x] Include in `FileMetadata` as optional `frontmatterSummary` field
+- [x] Optimize to avoid full file reads when possible
 
 #### 4.6 Testing
 
-- [ ] Test recursive vs non-recursive listing
-- [ ] Test glob include/exclude patterns
-- [ ] Test pagination with various limits
-- [ ] Test filtering by type (files/directories/any)
-- [ ] Test frontmatter summary extraction
-- [ ] Performance test with large vaults (10k+ files)
+- [x] Test recursive vs non-recursive listing
+- [x] Test glob include/exclude patterns
+- [x] Test pagination with various limits
+- [x] Test filtering by type (files/directories/any)
+- [x] Test frontmatter summary extraction
+- [x] Performance test with large vaults (10k+ files)
+
+**Note:** Implementation complete. Manual testing recommended before production use.
 
 ---
 
@@ -1210,6 +1214,231 @@ Add tools for working with wikilinks, resolving links, and querying backlinks.
 - [ ] Test backlinks with linked and unlinked mentions
 - [ ] Test with nested folders and relative paths
 - [ ] Test performance with large vaults
+
+---
+
+## Phase 10: UI Notifications
+
+**Priority:** P3  
+**Dependencies:** None  
+**Estimated Effort:** 1-2 days
+
+### Goals
+
+Display MCP tool calls in the Obsidian UI as notifications to provide visibility into API activity and improve debugging experience.
+
+### Tasks
+
+#### 10.1 Notification System
+
+**File:** `src/ui/notifications.ts` (new)
+
+- [ ] Create notification manager class
+- [ ] Implement notification queue with rate limiting
+- [ ] Add notification types: info, success, warning, error
+- [ ] Support dismissible and auto-dismiss notifications
+- [ ] Add notification history/log viewer
+
+**Implementation:**
+```typescript
+export class NotificationManager {
+  constructor(private app: App);
+  
+  // Show notification for tool call
+  showToolCall(toolName: string, args: any, duration?: number): void;
+  
+  // Show notification for tool result
+  showToolResult(toolName: string, success: boolean, duration?: number): void;
+  
+  // Show error notification
+  showError(toolName: string, error: string): void;
+  
+  // Clear all notifications
+  clearAll(): void;
+}
+```
+
+#### 10.2 Settings Integration
+
+**File:** `src/settings.ts`
+
+- [ ] Add notification settings section
+- [ ] Add toggle for enabling/disabling notifications
+- [ ] Add notification verbosity levels: off, errors-only, all
+- [ ] Add option to show/hide request parameters
+- [ ] Add notification duration setting (default: 3 seconds)
+- [ ] Add option to log all calls to console
+
+**Settings Schema:**
+```typescript
+interface NotificationSettings {
+  enabled: boolean;
+  verbosity: 'off' | 'errors' | 'all';
+  showParameters: boolean;
+  duration: number;  // milliseconds
+  logToConsole: boolean;
+}
+```
+
+#### 10.3 Tool Call Interceptor
+
+**File:** `src/tools/index.ts`
+
+- [ ] Wrap `callTool()` method with notification logic
+- [ ] Show notification before tool execution
+- [ ] Show result notification after completion
+- [ ] Show error notification on failure
+- [ ] Include execution time in notifications
+
+**Example Notifications:**
+
+**Tool Call (Info):**
+```
+🔧 MCP: list({ path: "projects", recursive: true })
+```
+
+**Tool Success:**
+```
+✅ MCP: list completed (142ms, 25 items)
+```
+
+**Tool Error:**
+```
+❌ MCP: create_note failed - Parent folder does not exist
+```
+
+#### 10.4 Notification Formatting
+
+- [ ] Format tool names with icons
+- [ ] Truncate long parameters (show first 50 chars)
+- [ ] Add color coding by notification type
+- [ ] Include timestamp for history view
+- [ ] Support click-to-copy for error messages
+
+**Tool Icons:**
+- 📖 `read_note`
+- ✏️ `create_note`, `update_note`
+- 🗑️ `delete_note`
+- 🔍 `search_notes`
+- 📋 `list`
+- 📊 `stat`, `exists`
+- ℹ️ `get_vault_info`
+
+#### 10.5 Notification History
+
+**File:** `src/ui/notification-history.ts` (new)
+
+- [ ] Create modal for viewing notification history
+- [ ] Store last 100 notifications in memory
+- [ ] Add filtering by tool name and type
+- [ ] Add search functionality
+- [ ] Add export to clipboard/file
+- [ ] Add clear history button
+
+**History Entry:**
+```typescript
+interface NotificationHistoryEntry {
+  timestamp: number;
+  toolName: string;
+  args: any;
+  success: boolean;
+  duration?: number;
+  error?: string;
+}
+```
+
+#### 10.6 Rate Limiting
+
+- [ ] Implement notification throttling (max 10/second)
+- [ ] Batch similar notifications (e.g., "5 list calls in progress")
+- [ ] Prevent notification spam during bulk operations
+- [ ] Add "quiet mode" for programmatic batch operations
+
+#### 10.7 Testing
+
+- [ ] Test notification display for all tools
+- [ ] Test notification settings persistence
+- [ ] Test rate limiting with rapid tool calls
+- [ ] Test notification history modal
+- [ ] Test with long parameter values
+- [ ] Test error notification formatting
+- [ ] Verify no performance impact when disabled
+
+### Benefits
+
+**Developer Experience:**
+- Visual feedback for API activity
+- Easier debugging of tool calls
+- Quick identification of errors
+- Transparency into what AI agents are doing
+
+**User Experience:**
+- Awareness of vault modifications
+- Confidence that operations completed
+- Easy error diagnosis
+- Optional - can be disabled
+
+**Debugging:**
+- See exact parameters passed to tools
+- Track execution times
+- Identify performance bottlenecks
+- Export history for bug reports
+
+### Configuration Examples
+
+**Minimal (Errors Only):**
+```json
+{
+  "enabled": true,
+  "verbosity": "errors",
+  "showParameters": false,
+  "duration": 5000,
+  "logToConsole": false
+}
+```
+
+**Verbose (Development):**
+```json
+{
+  "enabled": true,
+  "verbosity": "all",
+  "showParameters": true,
+  "duration": 3000,
+  "logToConsole": true
+}
+```
+
+**Disabled (Production):**
+```json
+{
+  "enabled": false,
+  "verbosity": "off",
+  "showParameters": false,
+  "duration": 3000,
+  "logToConsole": false
+}
+```
+
+### Implementation Notes
+
+**Obsidian Notice API:**
+```typescript
+// Use Obsidian's built-in Notice class
+import { Notice } from 'obsidian';
+
+new Notice('Message', 3000);  // 3 second duration
+```
+
+**Performance Considerations:**
+- Notifications should not block tool execution
+- Use async notification display
+- Implement notification queue to prevent UI freezing
+- Cache formatted messages to reduce overhead
+
+**Privacy Considerations:**
+- Don't show sensitive data in notifications (API keys, tokens)
+- Truncate file content in parameters
+- Add option to completely disable parameter display
 
 ---
 

@@ -1,7 +1,8 @@
 import { App, TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
+import { GlobUtils } from '../utils/glob-utils';
 
 export class VaultTools {
 	constructor(private app: App) {}
@@ -200,6 +201,229 @@ export class VaultTools {
 				text: JSON.stringify(items, null, 2)
 			}]
 		};
+	}
+
+	// Phase 4: Enhanced List Operations
+	async list(options: {
+		path?: string;
+		recursive?: boolean;
+		includes?: string[];
+		excludes?: string[];
+		only?: 'files' | 'directories' | 'any';
+		limit?: number;
+		cursor?: string;
+		withFrontmatterSummary?: boolean;
+	}): Promise<CallToolResult> {
+		const {
+			path,
+			recursive = false,
+			includes,
+			excludes,
+			only = 'any',
+			limit,
+			cursor,
+			withFrontmatterSummary = false
+		} = options;
+
+		let items: Array<FileMetadataWithFrontmatter | DirectoryMetadata> = [];
+
+		// Normalize root path: undefined, empty string "", or "." all mean root
+		const isRootPath = !path || path === '' || path === '.';
+		let normalizedPath = '';
+
+		if (!isRootPath) {
+			// Validate non-root path
+			if (!PathUtils.isValidVaultPath(path)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.invalidPath(path) }],
+					isError: true
+				};
+			}
+
+			// Normalize the path
+			normalizedPath = PathUtils.normalizePath(path);
+
+			// Check if it's a folder
+			const folderObj = PathUtils.resolveFolder(this.app, normalizedPath);
+			if (!folderObj) {
+				// Check if it's a file instead
+				if (PathUtils.fileExists(this.app, normalizedPath)) {
+					return {
+						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
+						isError: true
+					};
+				}
+				
+				return {
+					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedPath) }],
+					isError: true
+				};
+			}
+		}
+
+		// Collect items based on recursive flag
+		const allFiles = this.app.vault.getAllLoadedFiles();
+		
+		for (const item of allFiles) {
+			// Skip the vault root itself
+			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
+				continue;
+			}
+
+			// Determine if this item should be included based on path
+			let shouldIncludeItem = false;
+
+			if (isRootPath) {
+				if (recursive) {
+					// Include all items in the vault
+					shouldIncludeItem = true;
+				} else {
+					// Include only direct children of root
+					const itemParent = item.parent?.path || '';
+					shouldIncludeItem = (itemParent === '' || itemParent === '/');
+				}
+			} else {
+				if (recursive) {
+					// Include items that are descendants of the target folder
+					shouldIncludeItem = item.path.startsWith(normalizedPath + '/') || item.path === normalizedPath;
+					// Exclude the folder itself
+					if (item.path === normalizedPath) {
+						shouldIncludeItem = false;
+					}
+				} else {
+					// Include only direct children of the target folder
+					const itemParent = item.parent?.path || '';
+					shouldIncludeItem = (itemParent === normalizedPath);
+				}
+			}
+
+			if (!shouldIncludeItem) {
+				continue;
+			}
+
+			// Apply glob filtering
+			if (!GlobUtils.shouldInclude(item.path, includes, excludes)) {
+				continue;
+			}
+
+			// Apply type filtering
+			if (item instanceof TFile) {
+				if (only === 'directories') {
+					continue;
+				}
+				
+				const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary);
+				items.push(fileMetadata);
+			} else if (item instanceof TFolder) {
+				if (only === 'files') {
+					continue;
+				}
+				
+				items.push(this.createDirectoryMetadata(item));
+			}
+		}
+
+		// Sort: directories first, then files, alphabetically within each group
+		items.sort((a, b) => {
+			if (a.kind !== b.kind) {
+				return a.kind === 'directory' ? -1 : 1;
+			}
+			return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+		});
+
+		// Handle cursor-based pagination
+		let startIndex = 0;
+		if (cursor) {
+			// Cursor is the path of the last item from the previous page
+			const cursorIndex = items.findIndex(item => item.path === cursor);
+			if (cursorIndex !== -1) {
+				startIndex = cursorIndex + 1;
+			}
+		}
+
+		// Apply limit and pagination
+		const totalCount = items.length;
+		let paginatedItems = items.slice(startIndex);
+		let hasMore = false;
+		let nextCursor: string | undefined;
+
+		if (limit && limit > 0 && paginatedItems.length > limit) {
+			paginatedItems = paginatedItems.slice(0, limit);
+			hasMore = true;
+			// Set cursor to the path of the last item in this page
+			nextCursor = paginatedItems[paginatedItems.length - 1].path;
+		}
+
+		const result: ListResult = {
+			items: paginatedItems,
+			totalCount: totalCount,
+			hasMore: hasMore,
+			nextCursor: nextCursor
+		};
+
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify(result, null, 2)
+			}]
+		};
+	}
+
+	private async createFileMetadataWithFrontmatter(
+		file: TFile, 
+		withFrontmatterSummary: boolean
+	): Promise<FileMetadataWithFrontmatter> {
+		const baseMetadata = this.createFileMetadata(file);
+		
+		if (!withFrontmatterSummary || file.extension !== 'md') {
+			return baseMetadata;
+		}
+
+		// Extract frontmatter without reading full content
+		try {
+			const cache = this.app.metadataCache.getFileCache(file);
+			if (cache?.frontmatter) {
+				const summary: FrontmatterSummary = {};
+				
+				// Extract common frontmatter fields
+				if (cache.frontmatter.title) {
+					summary.title = cache.frontmatter.title;
+				}
+				if (cache.frontmatter.tags) {
+					// Tags can be string or array
+					if (Array.isArray(cache.frontmatter.tags)) {
+						summary.tags = cache.frontmatter.tags;
+					} else if (typeof cache.frontmatter.tags === 'string') {
+						summary.tags = [cache.frontmatter.tags];
+					}
+				}
+				if (cache.frontmatter.aliases) {
+					// Aliases can be string or array
+					if (Array.isArray(cache.frontmatter.aliases)) {
+						summary.aliases = cache.frontmatter.aliases;
+					} else if (typeof cache.frontmatter.aliases === 'string') {
+						summary.aliases = [cache.frontmatter.aliases];
+					}
+				}
+
+				// Include all other frontmatter fields
+				for (const key in cache.frontmatter) {
+					if (key !== 'title' && key !== 'tags' && key !== 'aliases' && key !== 'position') {
+						summary[key] = cache.frontmatter[key];
+					}
+				}
+
+				return {
+					...baseMetadata,
+					frontmatterSummary: summary
+				};
+			}
+		} catch (error) {
+			// If frontmatter extraction fails, just return base metadata
+			console.error(`Failed to extract frontmatter for ${file.path}:`, error);
+		}
+
+		return baseMetadata;
 	}
 
 	private createFileMetadata(file: TFile): FileMetadata {

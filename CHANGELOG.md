@@ -2,6 +2,135 @@
 
 All notable changes to the Obsidian MCP Server plugin will be documented in this file.
 
+## [3.0.0] - 2025-10-16
+
+### 🚀 Phase 4: Enhanced List Operations
+
+This release replaces `list_notes` with a powerful new `list` tool featuring advanced filtering, recursion, pagination, and frontmatter summaries.
+
+#### Breaking Changes
+
+**Removed Tools**
+- `list_notes` - Replaced with the more powerful `list` tool
+  - **Migration:** Replace `list_notes({ path })` with `list({ path })`
+  - The new `list` tool is backwards compatible for basic usage
+
+#### Added
+
+**New Tool: `list`**
+- Advanced file/directory listing with comprehensive filtering options
+- **Recursive listing** - Traverse entire directory trees with `recursive: true`
+- **Glob pattern filtering** - Include/exclude patterns supporting `*`, `**`, `?`, `[abc]`, `{a,b}`
+- **Type filtering** - Filter by `files`, `directories`, or `any`
+- **Cursor-based pagination** - Handle large result sets efficiently with `limit` and `cursor`
+- **Frontmatter summaries** - Extract title, tags, aliases without reading full content
+- Returns structured `ListResult` with items, totalCount, hasMore, and nextCursor
+
+**New Utilities (`src/utils/glob-utils.ts`)**
+- `GlobUtils` class for pattern matching
+- Supports wildcards: `*` (any chars except /), `**` (any chars including /), `?` (single char)
+- Supports character classes: `[abc]`, alternatives: `{a,b,c}`
+- `shouldInclude()` - Combined include/exclude filtering
+- `matches()` - Test path against glob pattern
+
+**Type Definitions (`src/types/mcp-types.ts`)**
+- `FrontmatterSummary` - Parsed frontmatter fields (title, tags, aliases, custom fields)
+- `FileMetadataWithFrontmatter` - Extended file metadata with optional frontmatter
+- `ListResult` - Paginated list response structure
+
+**Implementation (`src/tools/vault-tools.ts`)**
+- `list(options)` method - Enhanced listing with all Phase 4 features
+- `createFileMetadataWithFrontmatter()` - Efficient frontmatter extraction using metadata cache
+- Recursive directory traversal
+- Glob pattern filtering integration
+- Cursor-based pagination logic
+
+**Tool Registry (`src/tools/index.ts`)**
+- Registered `list` tool with comprehensive schema
+- Removed `list_notes` tool definition
+- Updated call handler to route `list` requests
+
+#### Features in Detail
+
+**Recursive Listing**
+```typescript
+// List all markdown files in vault recursively
+list({ recursive: true, includes: ["*.md"] })
+```
+
+**Glob Filtering**
+```typescript
+// Include only markdown files, exclude .obsidian folder
+list({ 
+  includes: ["*.md"], 
+  excludes: [".obsidian/**"] 
+})
+```
+
+**Type Filtering**
+```typescript
+// List only directories
+list({ only: "directories" })
+```
+
+**Pagination**
+```typescript
+// First page
+list({ limit: 50 })
+// Next page using cursor
+list({ limit: 50, cursor: "path/from/previous/response" })
+```
+
+**Frontmatter Summaries**
+```typescript
+// Get file list with frontmatter metadata
+list({ 
+  withFrontmatterSummary: true,
+  includes: ["*.md"]
+})
+```
+
+#### Example Response
+
+```json
+{
+  "items": [
+    {
+      "kind": "directory",
+      "name": "projects",
+      "path": "projects",
+      "childrenCount": 15,
+      "modified": 1697500800000
+    },
+    {
+      "kind": "file",
+      "name": "README.md",
+      "path": "README.md",
+      "extension": "md",
+      "size": 2048,
+      "modified": 1697500800000,
+      "created": 1697400000000,
+      "frontmatterSummary": {
+        "title": "Project Overview",
+        "tags": ["documentation", "readme"],
+        "aliases": ["index"]
+      }
+    }
+  ],
+  "totalCount": 2,
+  "hasMore": false
+}
+```
+
+#### Performance
+
+- Frontmatter extraction uses Obsidian's metadata cache (no file reads)
+- Glob matching uses efficient regex compilation
+- Pagination prevents memory issues with large vaults
+- Recursive listing optimized for vault structure
+
+---
+
 ## [2.1.0] - 2025-10-16
 
 ### ✨ Phase 3: Discovery Endpoints
