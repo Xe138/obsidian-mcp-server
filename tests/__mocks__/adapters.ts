@@ -14,6 +14,9 @@ export function createMockVaultAdapter(overrides?: Partial<IVaultAdapter>): IVau
 		process: jest.fn(),
 		createFolder: jest.fn(),
 		create: jest.fn(),
+		modify: jest.fn(),
+		delete: jest.fn(),
+		trash: jest.fn(),
 		...overrides
 	};
 }

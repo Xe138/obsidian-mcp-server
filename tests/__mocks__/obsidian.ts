@@ -71,3 +71,29 @@ export class Plugin {}
 export class Notice {}
 export class PluginSettingTab {}
 export class Setting {}
+
+// Mock parseYaml function
+export function parseYaml(yaml: string): any {
+	// Simple YAML parser mock for testing
+	const result: any = {};
+	const lines = yaml.split('\n');
+
+	for (const line of lines) {
+		if (line.trim() && !line.startsWith('#')) {
+			const colonIndex = line.indexOf(':');
+			if (colonIndex > 0) {
+				const key = line.substring(0, colonIndex).trim();
+				let value = line.substring(colonIndex + 1).trim();
+
+				// Handle arrays
+				if (value.startsWith('[') && value.endsWith(']')) {
+					value = value.slice(1, -1).split(',').map(v => v.trim());
+				}
+
+				result[key] = value;
+			}
+		}
+	}
+
+	return result;
+}
