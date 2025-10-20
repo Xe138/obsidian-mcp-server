@@ -279,7 +279,6 @@ This release implements safe write operations with concurrency control, partial 
 - `generateVersionId()` - Create version ID from file mtime and size
 - `validateVersion()` - Check if provided version matches current
 - `versionMismatchError()` - Generate 412 Precondition Failed error
-- `createVersionedResponse()` - Add version info to responses
 - Uses SHA-256 hash with URL-safe base64 encoding
 
 **Enhanced Tool: `create_note`**
