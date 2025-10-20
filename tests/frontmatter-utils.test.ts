@@ -629,6 +629,26 @@ No compressed-json, json, or other language specifier
 				expect(result.elementCount).toBe(2);
 			});
 
+			test('parses Excalidraw with code fence lacking language specifier (coverage for lines 253-255)', () => {
+				// Specific test to ensure Pattern 4 code path is exercised
+				// Uses only basic code fence with no language hint after ## Drawing
+				const content = `
+excalidraw-plugin
+
+## Drawing
+\`\`\`
+{"elements": [{"id": "elem1"}, {"id": "elem2"}, {"id": "elem3"}], "appState": {"gridSize": 20}, "version": 2}
+\`\`\``;
+
+				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
+
+				expect(result.isExcalidraw).toBe(true);
+				expect(result.elementCount).toBe(3);
+				expect(result.hasCompressedData).toBe(false);
+				expect(result.metadata?.version).toBe(2);
+				expect(result.metadata?.appState).toEqual({"gridSize": 20});
+			});
+
 			test('tries patterns in entire content if no ## Drawing section', () => {
 				const content = `\`\`\`json
 {"elements": [{"id": "1"}], "appState": {}, "version": 2, "type":"excalidraw"}

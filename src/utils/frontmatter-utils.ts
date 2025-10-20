@@ -240,9 +240,9 @@ export class FrontmatterUtils {
 					}
 				}
 				
-				// Pattern 3: ``` with any language specifier
+				// Pattern 3: ``` with any language specifier (one or more characters)
 				if (!jsonString) {
-					match = afterDrawing.match(/```[a-z-]*\s*\n([\s\S]*?)```/);
+					match = afterDrawing.match(/```[a-z-]+\s*\n([\s\S]*?)```/);
 					if (match) {
 						jsonString = match[1];
 					}
@@ -263,8 +263,8 @@ export class FrontmatterUtils {
 				const patterns = [
 					/```compressed-json\s*\n([\s\S]*?)```/,
 					/```json\s*\n([\s\S]*?)```/,
-					/```[a-z-]*\s*\n([\s\S]*?)```/,
-					/```\s*\n([\s\S]*?)```/
+					/```[a-z-]+\s*\n([\s\S]*?)```/, // One or more chars for language
+					/```\s*\n([\s\S]*?)```/  // No language specifier
 				];
 				
 				for (const pattern of patterns) {
