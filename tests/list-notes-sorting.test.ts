@@ -1,33 +1,38 @@
 import { VaultTools } from '../src/tools/vault-tools';
+import { createMockVaultAdapter, createMockMetadataCacheAdapter, createMockTFolder, createMockTFile } from './__mocks__/adapters';
 import { App, TFile, TFolder } from 'obsidian';
 import { FileMetadata, DirectoryMetadata } from '../src/types/mcp-types';
 
 describe('VaultTools - list_notes sorting', () => {
-	let app: App;
 	let vaultTools: VaultTools;
+	let mockVault: ReturnType<typeof createMockVaultAdapter>;
+	let mockMetadata: ReturnType<typeof createMockMetadataCacheAdapter>;
+	let mockApp: App;
 
 	beforeEach(() => {
-		// Mock App with vault
-		app = {
+		mockVault = createMockVaultAdapter();
+		mockMetadata = createMockMetadataCacheAdapter();
+		mockApp = {
 			vault: {
 				getAllLoadedFiles: jest.fn(),
 			}
 		} as any;
 
-		vaultTools = new VaultTools(app);
+		vaultTools = new VaultTools(mockVault, mockMetadata, mockApp);
 	});
 
 	describe('Case-insensitive alphabetical sorting', () => {
 		it('should sort directories case-insensitively', async () => {
 			// Create mock folders with mixed case names
 			const folders = [
-				createMockFolder('construction Game', 'construction Game'),
-				createMockFolder('CTP Lancaster', 'CTP Lancaster'),
-				createMockFolder('Archive', 'Archive'),
-				createMockFolder('daily', 'daily'),
+				createMockTFolder('construction Game'),
+				createMockTFolder('CTP Lancaster'),
+				createMockTFolder('Archive'),
+				createMockTFolder('daily'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(folders);
+			const rootFolder = createMockTFolder('', folders);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes();
 			const items = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -48,13 +53,14 @@ describe('VaultTools - list_notes sorting', () => {
 
 		it('should sort files case-insensitively', async () => {
 			const files = [
-				createMockFile('Zebra.md', 'Zebra.md'),
-				createMockFile('apple.md', 'apple.md'),
-				createMockFile('Banana.md', 'Banana.md'),
-				createMockFile('cherry.md', 'cherry.md'),
+				createMockTFile('Zebra.md'),
+				createMockTFile('apple.md'),
+				createMockTFile('Banana.md'),
+				createMockTFile('cherry.md'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(files);
+			const rootFolder = createMockTFolder('', files);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes();
 			const items = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -74,13 +80,14 @@ describe('VaultTools - list_notes sorting', () => {
 
 		it('should place all directories before all files', async () => {
 			const items = [
-				createMockFile('zebra.md', 'zebra.md'),
-				createMockFolder('Archive', 'Archive'),
-				createMockFile('apple.md', 'apple.md'),
-				createMockFolder('daily', 'daily'),
+				createMockTFile('zebra.md'),
+				createMockTFolder('Archive'),
+				createMockTFile('apple.md'),
+				createMockTFolder('daily'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(items);
+			const rootFolder = createMockTFolder('', items);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes();
 			const parsed = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -97,11 +104,12 @@ describe('VaultTools - list_notes sorting', () => {
 	describe('Root path handling', () => {
 		it('should list root when path is undefined', async () => {
 			const items = [
-				createMockFolder('folder1', 'folder1'),
-				createMockFile('root-file.md', 'root-file.md'),
+				createMockTFolder('folder1'),
+				createMockTFile('root-file.md'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(items);
+			const rootFolder = createMockTFolder('', items);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes();
 			const parsed = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -111,11 +119,12 @@ describe('VaultTools - list_notes sorting', () => {
 
 		it('should list root when path is empty string', async () => {
 			const items = [
-				createMockFolder('folder1', 'folder1'),
-				createMockFile('root-file.md', 'root-file.md'),
+				createMockTFolder('folder1'),
+				createMockTFile('root-file.md'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(items);
+			const rootFolder = createMockTFolder('', items);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes('');
 			const parsed = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -125,11 +134,12 @@ describe('VaultTools - list_notes sorting', () => {
 
 		it('should list root when path is dot', async () => {
 			const items = [
-				createMockFolder('folder1', 'folder1'),
-				createMockFile('root-file.md', 'root-file.md'),
+				createMockTFolder('folder1'),
+				createMockTFile('root-file.md'),
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(items);
+			const rootFolder = createMockTFolder('', items);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes('.');
 			const parsed = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -138,14 +148,18 @@ describe('VaultTools - list_notes sorting', () => {
 		});
 
 		it('should only return direct children of root', async () => {
+			const folder1 = createMockTFolder('folder1');
+			const rootFile = createMockTFile('root-file.md');
+			// Create nested file - this should NOT be included as it's in a subfolder
+			const nestedFile = createMockTFile('folder1/nested.md');
+
 			const items = [
-				createMockFolder('folder1', 'folder1'),
-				createMockFile('root-file.md', 'root-file.md'),
-				// These should NOT be included (nested)
-				createMockFile('nested.md', 'folder1/nested.md', 'folder1'),
+				folder1,
+				rootFile,
 			];
 
-			(app.vault.getAllLoadedFiles as jest.Mock).mockReturnValue(items);
+			const rootFolder = createMockTFolder('', items);
+			mockVault.getRoot = jest.fn().mockReturnValue(rootFolder);
 
 			const result = await vaultTools.listNotes();
 			const parsed = JSON.parse(result.content[0].text) as Array<FileMetadata | DirectoryMetadata>;
@@ -155,38 +169,4 @@ describe('VaultTools - list_notes sorting', () => {
 			expect(parsed.some(item => item.name === 'nested.md')).toBe(false);
 		});
 	});
-
-	// Helper functions
-	function createMockFolder(name: string, path: string, parentPath: string = ''): any {
-		const folder = Object.create(TFolder.prototype);
-		Object.assign(folder, {
-			name,
-			path,
-			parent: parentPath ? { path: parentPath } : null,
-			children: [],
-			stat: {
-				mtime: Date.now(),
-				ctime: Date.now(),
-				size: 0
-			}
-		});
-		return folder;
-	}
-
-	function createMockFile(name: string, path: string, parentPath: string = ''): any {
-		const file = Object.create(TFile.prototype);
-		Object.assign(file, {
-			name,
-			path,
-			basename: name.replace(/\.[^.]+$/, ''),
-			extension: name.split('.').pop() || '',
-			parent: parentPath ? { path: parentPath } : null,
-			stat: {
-				mtime: Date.now(),
-				ctime: Date.now(),
-				size: 1024
-			}
-		});
-		return file;
-	}
 });
