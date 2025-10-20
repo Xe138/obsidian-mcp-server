@@ -174,32 +174,4 @@ Troubleshooting tips:
 • Example: "folder/note.md"
 • Use the list_notes() tool to see available files`;
 	}
-
-	/**
-	 * Generate a permission denied error message
-	 */
-	static permissionDenied(operation: string, path: string): string {
-		return `Permission denied: cannot ${operation} "${path}"
-
-Troubleshooting tips:
-• Check file/folder permissions on your system
-• Ensure the vault is not in a read-only location
-• Verify the file is not locked by another application
-• Try closing the file in Obsidian if it's currently open`;
-	}
-
-	/**
-	 * Generate a helpful error message for any error
-	 */
-	static formatError(error: Error | string, context?: string): string {
-		const message = error instanceof Error ? error.message : error;
-		const contextText = context ? `\nContext: ${context}` : '';
-		
-		return `Error: ${message}${contextText}
-
-If this error persists, please check:
-• The MCP server logs for more details
-• That your Obsidian vault is accessible
-• That the MCP server has proper permissions`;
-	}
 }
