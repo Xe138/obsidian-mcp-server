@@ -453,6 +453,16 @@ describe('NoteTools', () => {
 			expect(result.content[0].text).toContain('not found');
 		});
 
+		it('should return error if source path is a folder', async () => {
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(null);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(true);
+
+			const result = await noteTools.renameFile('folder', 'new.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not a file');
+		});
+
 		it('should return error if destination exists', async () => {
 			const mockFile = createMockTFile('old.md');
 
@@ -463,6 +473,19 @@ describe('NoteTools', () => {
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('already exists');
+		});
+
+		it('should return error if destination path is a folder', async () => {
+			const mockFile = createMockTFile('old.md');
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			(PathUtils.fileExists as jest.Mock).mockReturnValue(false);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(true);
+
+			const result = await noteTools.renameFile('old.md', 'existing-folder');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not a file');
 		});
 
 		it('should handle rename errors', async () => {
@@ -571,6 +594,16 @@ Some text
 			expect(result.content[0].text).toContain('not found');
 		});
 
+		it('should return error if path is a folder', async () => {
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(null);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(true);
+
+			const result = await noteTools.readExcalidraw('folder');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not a file');
+		});
+
 		it('should handle read errors', async () => {
 			const mockFile = createMockTFile('drawing.md');
 
@@ -641,6 +674,16 @@ Some text
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('not found');
+		});
+
+		it('should return error if path is a folder', async () => {
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(null);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(true);
+
+			const result = await noteTools.updateFrontmatter('folder', { title: 'Test' });
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not a file');
 		});
 
 		it('should check version if ifMatch provided', async () => {
@@ -766,6 +809,18 @@ Some text
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('not found');
+		});
+
+		it('should return error if path is a folder', async () => {
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(null);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(true);
+
+			const result = await noteTools.updateSections('folder', [
+				{ startLine: 1, endLine: 1, content: 'New' }
+			]);
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not a file');
 		});
 	});
 
