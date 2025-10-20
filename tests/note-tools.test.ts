@@ -570,6 +570,27 @@ Some text
 			expect(parsed.isExcalidraw).toBe(true);
 		});
 
+		it('should include compressed data when includeCompressed is true', async () => {
+			const mockFile = createMockTFile('drawing.md');
+			const excalidrawContent = `# Text Elements
+Some text
+
+## Drawing
+\`\`\`json
+{"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[{"id":"1","type":"rectangle"}],"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}
+\`\`\``;
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(excalidrawContent);
+
+			const result = await noteTools.readExcalidraw('drawing.md', { includeCompressed: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.isExcalidraw).toBe(true);
+			expect(parsed.compressedData).toBe(excalidrawContent);
+		});
+
 		it('should return error for non-Excalidraw files', async () => {
 			const mockFile = createMockTFile('regular.md');
 			const content = '# Regular Note\n\nNot an Excalidraw file';
@@ -638,6 +659,35 @@ Some text
 			expect(parsed.success).toBe(true);
 			expect(parsed.updatedFields).toContain('title');
 			expect(parsed.updatedFields).toContain('author');
+		});
+
+		it('should add frontmatter to file without existing frontmatter', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = 'Regular content without frontmatter';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+			mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+			const result = await noteTools.updateFrontmatter('test.md', { title: 'New Title', tags: ['test'] });
+
+			expect(result.isError).toBeUndefined();
+			expect(mockVault.modify).toHaveBeenCalled();
+			const modifyCall = (mockVault.modify as jest.Mock).mock.calls[0];
+			const newContent = modifyCall[1];
+			// Should have frontmatter at the beginning followed by original content
+			expect(newContent).toContain('---\n');
+			expect(newContent).toContain('title:');
+			expect(newContent).toContain('tags:');
+			expect(newContent).toContain('Regular content without frontmatter');
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.success).toBe(true);
+			expect(parsed.updatedFields).toContain('title');
+			expect(parsed.updatedFields).toContain('tags');
 		});
 
 		it('should remove frontmatter fields', async () => {
