@@ -1,4 +1,5 @@
-import { App, TFile, MetadataCache } from 'obsidian';
+import { TFile } from 'obsidian';
+import { IVaultAdapter, IMetadataCacheAdapter } from '../adapters/interfaces';
 
 /**
  * Parsed wikilink structure
@@ -113,15 +114,16 @@ export class LinkUtils {
 	/**
 	 * Resolve a wikilink to its target file
 	 * Uses Obsidian's MetadataCache for accurate resolution
-	 * 
-	 * @param app Obsidian App instance
+	 *
+	 * @param vault Vault adapter for file operations
+	 * @param metadata Metadata cache adapter for link resolution
 	 * @param sourcePath Path of the file containing the link
 	 * @param linkText Link text (without brackets)
 	 * @returns Resolved file or null if not found
 	 */
-	static resolveLink(app: App, sourcePath: string, linkText: string): TFile | null {
+	static resolveLink(vault: IVaultAdapter, metadata: IMetadataCacheAdapter, sourcePath: string, linkText: string): TFile | null {
 		// Get the source file
-		const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+		const sourceFile = vault.getAbstractFileByPath(sourcePath);
 		if (!(sourceFile instanceof TFile)) {
 			return null;
 		}
@@ -132,22 +134,22 @@ export class LinkUtils {
 		// - Relative paths
 		// - Aliases
 		// - Headings and blocks
-		const resolvedFile = app.metadataCache.getFirstLinkpathDest(linkText, sourcePath);
-		
+		const resolvedFile = metadata.getFirstLinkpathDest(linkText, sourcePath);
+
 		return resolvedFile;
 	}
 
 	/**
 	 * Find potential matches for an unresolved link
 	 * Uses fuzzy matching on file names
-	 * 
-	 * @param app Obsidian App instance
+	 *
+	 * @param vault Vault adapter for file operations
 	 * @param linkText Link text to find matches for
 	 * @param maxSuggestions Maximum number of suggestions to return
 	 * @returns Array of suggested file paths
 	 */
-	static findSuggestions(app: App, linkText: string, maxSuggestions: number = 5): string[] {
-		const allFiles = app.vault.getMarkdownFiles();
+	static findSuggestions(vault: IVaultAdapter, linkText: string, maxSuggestions: number = 5): string[] {
+		const allFiles = vault.getMarkdownFiles();
 		const suggestions: Array<{ path: string; score: number }> = [];
 
 		// Remove heading/block references for matching
@@ -196,20 +198,22 @@ export class LinkUtils {
 	/**
 	 * Get all backlinks to a file
 	 * Uses Obsidian's MetadataCache for accurate backlink detection
-	 * 
-	 * @param app Obsidian App instance
+	 *
+	 * @param vault Vault adapter for file operations
+	 * @param metadata Metadata cache adapter for link resolution
 	 * @param targetPath Path of the file to find backlinks for
 	 * @param includeUnlinked Whether to include unlinked mentions
 	 * @returns Array of backlinks
 	 */
 	static async getBacklinks(
-		app: App,
+		vault: IVaultAdapter,
+		metadata: IMetadataCacheAdapter,
 		targetPath: string,
 		includeUnlinked: boolean = false
 	): Promise<Backlink[]> {
 		const backlinks: Backlink[] = [];
-		const targetFile = app.vault.getAbstractFileByPath(targetPath);
-		
+		const targetFile = vault.getAbstractFileByPath(targetPath);
+
 		if (!(targetFile instanceof TFile)) {
 			return backlinks;
 		}
@@ -219,7 +223,7 @@ export class LinkUtils {
 
 		// Get all backlinks from MetadataCache using resolvedLinks
 		// resolvedLinks is a map of: sourcePath -> { targetPath: linkCount }
-		const resolvedLinks = app.metadataCache.resolvedLinks;
+		const resolvedLinks = metadata.resolvedLinks;
 		
 		// Find all files that link to our target
 		for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
@@ -228,22 +232,22 @@ export class LinkUtils {
 				continue;
 			}
 
-			const sourceFile = app.vault.getAbstractFileByPath(sourcePath);
+			const sourceFile = vault.getAbstractFileByPath(sourcePath);
 			if (!(sourceFile instanceof TFile)) {
 				continue;
 			}
 
 			// Read the source file to find link occurrences
-			const content = await app.vault.read(sourceFile);
+			const content = await vault.read(sourceFile);
 			const lines = content.split('\n');
 			const occurrences: BacklinkOccurrence[] = [];
 
 			// Parse wikilinks in the source file to find references to target
 			const wikilinks = this.parseWikilinks(content);
-			
+
 			for (const link of wikilinks) {
 				// Resolve this link to see if it points to our target
-				const resolvedFile = this.resolveLink(app, sourcePath, link.target);
+				const resolvedFile = this.resolveLink(vault, metadata, sourcePath, link.target);
 				
 				if (resolvedFile && resolvedFile.path === targetPath) {
 					const snippet = this.extractSnippet(lines, link.line - 1, 100);
@@ -265,11 +269,11 @@ export class LinkUtils {
 
 		// Process unlinked mentions if requested
 		if (includeUnlinked) {
-			const allFiles = app.vault.getMarkdownFiles();
-			
+			const allFiles = vault.getMarkdownFiles();
+
 			// Build a set of files that already have linked backlinks
 			const linkedSourcePaths = new Set(backlinks.map(b => b.sourcePath));
-			
+
 			for (const file of allFiles) {
 				// Skip if already in linked backlinks
 				if (linkedSourcePaths.has(file.path)) {
@@ -281,7 +285,7 @@ export class LinkUtils {
 					continue;
 				}
 
-				const content = await app.vault.read(file);
+				const content = await vault.read(file);
 				const lines = content.split('\n');
 				const occurrences: BacklinkOccurrence[] = [];
 
@@ -345,30 +349,32 @@ export class LinkUtils {
 
 	/**
 	 * Validate all wikilinks in a file
-	 * @param app Obsidian App instance
+	 * @param vault Vault adapter for file operations
+	 * @param metadata Metadata cache adapter for link resolution
 	 * @param filePath Path of the file to validate
 	 * @returns Object with resolved and unresolved links
 	 */
 	static async validateWikilinks(
-		app: App,
+		vault: IVaultAdapter,
+		metadata: IMetadataCacheAdapter,
 		filePath: string
 	): Promise<{
 		resolvedLinks: ResolvedLink[];
 		unresolvedLinks: UnresolvedLink[];
 	}> {
-		const file = app.vault.getAbstractFileByPath(filePath);
+		const file = vault.getAbstractFileByPath(filePath);
 		if (!(file instanceof TFile)) {
 			return { resolvedLinks: [], unresolvedLinks: [] };
 		}
 
-		const content = await app.vault.read(file);
+		const content = await vault.read(file);
 		const wikilinks = this.parseWikilinks(content);
 
 		const resolvedLinks: ResolvedLink[] = [];
 		const unresolvedLinks: UnresolvedLink[] = [];
 
 		for (const link of wikilinks) {
-			const resolvedFile = this.resolveLink(app, filePath, link.target);
+			const resolvedFile = this.resolveLink(vault, metadata, filePath, link.target);
 
 			if (resolvedFile) {
 				resolvedLinks.push({
@@ -377,7 +383,7 @@ export class LinkUtils {
 					alias: link.alias
 				});
 			} else {
-				const suggestions = this.findSuggestions(app, link.target);
+				const suggestions = this.findSuggestions(vault, link.target);
 				unresolvedLinks.push({
 					text: link.raw,
 					line: link.line,
