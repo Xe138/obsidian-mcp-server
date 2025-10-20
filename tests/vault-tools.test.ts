@@ -387,7 +387,7 @@ describe('VaultTools', () => {
 			expect(parsed.items[0].frontmatterSummary.tags).toEqual(['single-tag']);
 		});
 
-		it('should handle string aliases and convert to array', async () => {
+		it('should normalize aliases from string to array in list()', async () => {
 			const mockFile = createMockTFile('test.md');
 			const mockRoot = createMockTFolder('', [mockFile]);
 			const mockCache = {
@@ -404,6 +404,25 @@ describe('VaultTools', () => {
 			expect(result.isError).toBeUndefined();
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.items[0].frontmatterSummary.aliases).toEqual(['single-alias']);
+		});
+
+		it('should handle array aliases in list()', async () => {
+			const mockFile = createMockTFile('test.md');
+			const mockRoot = createMockTFolder('', [mockFile]);
+			const mockCache = {
+				frontmatter: {
+					aliases: ['alias1', 'alias2']
+				}
+			};
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockMetadata.getFileCache = jest.fn().mockReturnValue(mockCache);
+
+			const result = await vaultTools.list({ withFrontmatterSummary: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items[0].frontmatterSummary.aliases).toEqual(['alias1', 'alias2']);
 		});
 
 		it('should handle frontmatter extraction error gracefully', async () => {
@@ -1097,6 +1116,24 @@ describe('VaultTools', () => {
 	});
 
 	describe('list - edge cases', () => {
+		it('should skip root folder in list() when iterating children', async () => {
+			// Create a root folder that appears as a child (edge case)
+			const rootChild = createMockTFolder('');
+			(rootChild as any).isRoot = jest.fn().mockReturnValue(true);
+			const normalFile = createMockTFile('test.md');
+			const mockRoot = createMockTFolder('', [rootChild, normalFile]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+
+			const result = await vaultTools.list({});
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			// Should only include the normal file, not the root child
+			expect(parsed.items.length).toBe(1);
+			expect(parsed.items[0].path).toBe('test.md');
+		});
+
 		it('should handle invalid path in list', async () => {
 			const result = await vaultTools.list({ path: '../invalid' });
 
@@ -1164,6 +1201,106 @@ describe('VaultTools', () => {
 			const parsed = JSON.parse(result.content[0].text);
 			// Should return from beginning when cursor not found
 			expect(parsed.items.length).toBeGreaterThan(0);
+		});
+
+		it('should handle folder without mtime in getFolderMetadata', async () => {
+			// Create a folder without stat property
+			const mockFolder = createMockTFolder('test-folder');
+			delete (mockFolder as any).stat;
+
+			const mockRoot = createMockTFolder('', [mockFolder]);
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+
+			const result = await vaultTools.list({});
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items[0].kind).toBe('directory');
+			// Modified time should be 0 when stat is not available
+			expect(parsed.items[0].modified).toBe(0);
+		});
+
+		it('should handle folder with mtime in getFolderMetadata', async () => {
+			// Create a folder WITH stat property containing mtime
+			const mockFolder = createMockTFolder('test-folder');
+			(mockFolder as any).stat = { mtime: 12345 };
+
+			const mockRoot = createMockTFolder('', [mockFolder]);
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+
+			const result = await vaultTools.list({});
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items[0].kind).toBe('directory');
+			// Modified time should be set from stat.mtime
+			expect(parsed.items[0].modified).toBe(12345);
+		});
+
+		it('should handle list on non-root path', async () => {
+			const mockFolder = createMockTFolder('subfolder', [
+				createMockTFile('subfolder/test.md')
+			]);
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFolder);
+
+			const result = await vaultTools.list({ path: 'subfolder' });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(1);
+		});
+	});
+
+	describe('search - maxResults edge cases', () => {
+		it('should stop at maxResults=1 when limit reached on file boundary', async () => {
+			const mockFile1 = createMockTFile('file1.md');
+			const mockFile2 = createMockTFile('file2.md');
+			mockVault.getMarkdownFiles = jest.fn().mockReturnValue([mockFile1, mockFile2]);
+			mockVault.read = jest.fn()
+				.mockResolvedValueOnce('first match here')
+				.mockResolvedValueOnce('second match here');
+
+			const result = await vaultTools.search({ query: 'match', maxResults: 1 });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			// Should stop after first match
+			expect(parsed.totalMatches).toBe(1);
+			expect(parsed.filesSearched).toBe(1);
+		});
+
+		it('should stop at maxResults=1 when limit reached within file', async () => {
+			const mockFile = createMockTFile('test.md');
+			mockVault.getMarkdownFiles = jest.fn().mockReturnValue([mockFile]);
+			mockVault.read = jest.fn().mockResolvedValue('match on line 1\nmatch on line 2\nmatch on line 3');
+
+			const result = await vaultTools.search({ query: 'match', maxResults: 1 });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			// Should stop after first match within the file
+			expect(parsed.totalMatches).toBe(1);
+		});
+
+		it('should adjust snippet for long lines at end of line', async () => {
+			const mockFile = createMockTFile('test.md');
+			// Create a very long line with the target at the end
+			const longLine = 'a'.repeat(500) + 'target';
+			mockVault.getMarkdownFiles = jest.fn().mockReturnValue([mockFile]);
+			mockVault.read = jest.fn().mockResolvedValue(longLine);
+
+			const result = await vaultTools.search({
+				query: 'target',
+				returnSnippets: true,
+				snippetLength: 100
+			});
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.matches[0].snippet.length).toBeLessThanOrEqual(100);
+			// Snippet should be adjusted to show the end of the line
+			expect(parsed.matches[0].snippet).toContain('target');
 		});
 	});
 });
