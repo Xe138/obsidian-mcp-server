@@ -295,6 +295,7 @@ export class FrontmatterUtils {
 				try {
 					// Validate base64 encoding (will throw on invalid data)
 					// This validates the compressed data is at least well-formed
+					/* istanbul ignore else - Buffer.from fallback for non-Node/browser environments without atob (Jest/Node always has atob) */
 					if (typeof atob !== 'undefined') {
 						// atob throws on invalid base64, unlike Buffer.from
 						atob(trimmedJson);
