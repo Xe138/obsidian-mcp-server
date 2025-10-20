@@ -59,14 +59,14 @@ export class PathUtils {
 
 		const normalized = this.normalizePath(path);
 
-		// Check for invalid characters (Windows restrictions)
-		const invalidChars = /[<>:"|?*\x00-\x1F]/;
-		if (invalidChars.test(normalized)) {
+		// Check for absolute paths (should be vault-relative)
+		if (normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized)) {
 			return false;
 		}
 
-		// Check for absolute paths (should be vault-relative)
-		if (normalized.startsWith('/') || /^[A-Za-z]:/.test(normalized)) {
+		// Check for invalid characters (Windows restrictions)
+		const invalidChars = /[<>:"|?*\x00-\x1F]/;
+		if (invalidChars.test(normalized)) {
 			return false;
 		}
 

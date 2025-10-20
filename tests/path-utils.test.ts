@@ -69,6 +69,14 @@ describe('PathUtils', () => {
 			expect(PathUtils.isValidVaultPath('folder/../note.md')).toBe(false);
 		});
 
+		test('should reject Windows absolute paths (C: drive)', () => {
+			expect(PathUtils.isValidVaultPath('C:\\Users\\file.md')).toBe(false);
+		});
+
+		test('should reject Windows absolute paths (D: drive)', () => {
+			expect(PathUtils.isValidVaultPath('D:\\Documents\\note.md')).toBe(false);
+		});
+
 		test('should accept paths after normalization', () => {
 			// These should be valid after normalization
 			expect(PathUtils.isValidVaultPath('/folder/note.md')).toBe(true);
@@ -231,6 +239,22 @@ describe('PathUtils - Integration with Obsidian', () => {
 
 		test('should return null for non-existent paths', () => {
 			expect(PathUtils.getPathType(mockApp, 'nonexistent')).toBe(null);
+		});
+	});
+
+	describe('pathExists', () => {
+		test('should return true if path exists (file)', () => {
+			(mockApp.vault as any)._addMockFile('note.md', false);
+			expect(PathUtils.pathExists(mockApp, 'note.md')).toBe(true);
+		});
+
+		test('should return true if path exists (folder)', () => {
+			(mockApp.vault as any)._addMockFile('folder', true);
+			expect(PathUtils.pathExists(mockApp, 'folder')).toBe(true);
+		});
+
+		test('should return false if path does not exist', () => {
+			expect(PathUtils.pathExists(mockApp, 'nonexistent')).toBe(false);
 		});
 	});
 });
