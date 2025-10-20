@@ -44,10 +44,11 @@ export function createMockFileManagerAdapter(overrides?: Partial<IFileManagerAda
 }
 
 /**
- * Helper to create a mock TFile
+ * Helper to create a mock TFile with proper prototype chain
  */
 export function createMockTFile(path: string, stat?: { ctime: number; mtime: number; size: number }): TFile {
-	return {
+	const file = Object.create(TFile.prototype);
+	Object.assign(file, {
 		path,
 		basename: path.split('/').pop()?.replace('.md', '') || '',
 		extension: 'md',
@@ -55,20 +56,22 @@ export function createMockTFile(path: string, stat?: { ctime: number; mtime: num
 		stat: stat || { ctime: Date.now(), mtime: Date.now(), size: 100 },
 		vault: {} as any,
 		parent: null
-	} as TFile;
+	});
+	return file;
 }
 
 /**
- * Helper to create a mock TFolder
+ * Helper to create a mock TFolder with proper prototype chain
  */
 export function createMockTFolder(path: string, children?: TAbstractFile[]): TFolder {
-	const folder = {
+	const folder = Object.create(TFolder.prototype);
+	Object.assign(folder, {
 		path,
 		name: path.split('/').pop() || '',
 		children: children || [],
 		vault: {} as any,
 		parent: null,
 		isRoot: function() { return path === '' || path === '/'; }
-	} as TFolder;
+	});
 	return folder;
 }
