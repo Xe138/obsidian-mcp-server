@@ -1303,4 +1303,18 @@ describe('VaultTools', () => {
 			expect(parsed.matches[0].snippet).toContain('target');
 		});
 	});
+
+	describe('getFolderWaypoint - error handling', () => {
+		it('should handle file read errors gracefully', async () => {
+			const mockFile = createMockTFile('test.md');
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockRejectedValue(new Error('Permission denied'));
+
+			const result = await vaultTools.getFolderWaypoint('test.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('Get folder waypoint error');
+			expect(result.content[0].text).toContain('Permission denied');
+		});
+	});
 });

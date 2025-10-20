@@ -448,11 +448,16 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist (shouldn't reach here)
+		// DEFENSIVE CODE - UNREACHABLE
+		// This code is unreachable because getAbstractFileByPath only returns TFile, TFolder, or null.
+		// All three cases are handled above (null at line 405, TFile at line 420, TFolder at line 436).
+		// TypeScript requires exhaustive handling, so this defensive return is included.
+		/* istanbul ignore next */
 		const result: StatResult = {
 			path: normalizedPath,
 			exists: false
 		};
+		/* istanbul ignore next */
 		return {
 			content: [{
 				type: "text",
@@ -520,11 +525,16 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist (shouldn't reach here)
+		// DEFENSIVE CODE - UNREACHABLE
+		// This code is unreachable because getAbstractFileByPath only returns TFile, TFolder, or null.
+		// All three cases are handled above (null at line 479, TFile at line 494, TFolder at line 509).
+		// TypeScript requires exhaustive handling, so this defensive return is included.
+		/* istanbul ignore next */
 		const result: ExistsResult = {
 			path: normalizedPath,
 			exists: false
 		};
+		/* istanbul ignore next */
 		return {
 			content: [{
 				type: "text",
