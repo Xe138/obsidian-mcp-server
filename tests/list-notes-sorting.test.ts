@@ -1,24 +1,18 @@
 import { VaultTools } from '../src/tools/vault-tools';
 import { createMockVaultAdapter, createMockMetadataCacheAdapter, createMockTFolder, createMockTFile } from './__mocks__/adapters';
-import { App, TFile, TFolder } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { FileMetadata, DirectoryMetadata } from '../src/types/mcp-types';
 
 describe('VaultTools - list_notes sorting', () => {
 	let vaultTools: VaultTools;
 	let mockVault: ReturnType<typeof createMockVaultAdapter>;
 	let mockMetadata: ReturnType<typeof createMockMetadataCacheAdapter>;
-	let mockApp: App;
 
 	beforeEach(() => {
 		mockVault = createMockVaultAdapter();
 		mockMetadata = createMockMetadataCacheAdapter();
-		mockApp = {
-			vault: {
-				getAllLoadedFiles: jest.fn(),
-			}
-		} as any;
 
-		vaultTools = new VaultTools(mockVault, mockMetadata, mockApp);
+		vaultTools = new VaultTools(mockVault, mockMetadata);
 	});
 
 	describe('Case-insensitive alphabetical sorting', () => {

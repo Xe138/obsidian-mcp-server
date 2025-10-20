@@ -9,7 +9,6 @@ import { MetadataCacheAdapter } from '../adapters/metadata-adapter';
 export function createVaultTools(app: App): VaultTools {
 	return new VaultTools(
 		new VaultAdapter(app.vault),
-		new MetadataCacheAdapter(app.metadataCache),
-		app
+		new MetadataCacheAdapter(app.metadataCache)
 	);
 }
