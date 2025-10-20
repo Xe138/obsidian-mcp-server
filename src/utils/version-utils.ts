@@ -44,15 +44,4 @@ export class VersionUtils {
 			]
 		}, null, 2);
 	}
-
-	/**
-	 * Create a response with version information
-	 */
-	static createVersionedResponse(file: TFile, data: any): any {
-		return {
-			...data,
-			versionId: this.generateVersionId(file),
-			modified: file.stat.mtime
-		};
-	}
 }
