@@ -6,9 +6,14 @@ import { GlobUtils } from '../utils/glob-utils';
 import { SearchUtils } from '../utils/search-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { LinkUtils } from '../utils/link-utils';
+import { IVaultAdapter, IMetadataCacheAdapter } from '../adapters/interfaces';
 
 export class VaultTools {
-	constructor(private app: App) {}
+	constructor(
+		private vault: IVaultAdapter,
+		private metadata: IMetadataCacheAdapter,
+		private app: App  // Keep temporarily for methods not yet migrated
+	) {}
 
 	async getVaultInfo(): Promise<CallToolResult> {
 		const files = this.app.vault.getFiles();
@@ -45,28 +50,12 @@ export class VaultTools {
 
 		// Normalize root path: undefined, empty string "", or "." all mean root
 		const isRootPath = !path || path === '' || path === '.';
-		
+
+		let targetFolder: TFolder;
+
 		if (isRootPath) {
-			// List direct children of the root
-			const allFiles = this.app.vault.getAllLoadedFiles();
-			for (const item of allFiles) {
-				// Skip the vault root itself
-				// The vault root can have path === '' or path === '/' depending on Obsidian version
-				if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
-					continue;
-				}
-				
-				// Check if this item is a direct child of root
-				// Root items have parent === null or parent.path === '' or parent.path === '/'
-				const itemParent = item.parent?.path || '';
-				if (itemParent === '' || itemParent === '/') {
-					if (item instanceof TFile) {
-						items.push(this.createFileMetadata(item));
-					} else if (item instanceof TFolder) {
-						items.push(this.createDirectoryMetadata(item));
-					}
-				}
-			}
+			// Get the root folder using adapter
+			targetFolder = this.vault.getRoot();
 		} else {
 			// Validate non-root path
 			if (!PathUtils.isValidVaultPath(path)) {
@@ -79,35 +68,38 @@ export class VaultTools {
 			// Normalize the path
 			const normalizedPath = PathUtils.normalizePath(path);
 
-			// Check if it's a folder
-			const folderObj = PathUtils.resolveFolder(this.app, normalizedPath);
+			// Get folder using adapter
+			const folderObj = this.vault.getAbstractFileByPath(normalizedPath);
+
 			if (!folderObj) {
-				// Check if it's a file instead
-				if (PathUtils.fileExists(this.app, normalizedPath)) {
-					return {
-						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
-						isError: true
-					};
-				}
-				
 				return {
 					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedPath) }],
 					isError: true
 				};
 			}
 
-			// Get direct children of the folder (non-recursive)
-			const allFiles = this.app.vault.getAllLoadedFiles();
-			for (const item of allFiles) {
-				// Check if this item is a direct child of the target folder
-				const itemParent = item.parent?.path || '';
-				if (itemParent === normalizedPath) {
-					if (item instanceof TFile) {
-						items.push(this.createFileMetadata(item));
-					} else if (item instanceof TFolder) {
-						items.push(this.createDirectoryMetadata(item));
-					}
-				}
+			// Check if it's a folder
+			if (!(folderObj instanceof TFolder)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
+					isError: true
+				};
+			}
+
+			targetFolder = folderObj;
+		}
+
+		// Iterate over direct children of the folder
+		for (const item of targetFolder.children) {
+			// Skip the vault root itself
+			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
+				continue;
+			}
+
+			if (item instanceof TFile) {
+				items.push(this.createFileMetadata(item));
+			} else if (item instanceof TFolder) {
+				items.push(this.createDirectoryMetadata(item));
 			}
 		}
 
@@ -155,9 +147,13 @@ export class VaultTools {
 
 		// Normalize root path: undefined, empty string "", or "." all mean root
 		const isRootPath = !path || path === '' || path === '.';
-		let normalizedPath = '';
 
-		if (!isRootPath) {
+		let targetFolder: TFolder;
+
+		if (isRootPath) {
+			// Get the root folder using adapter
+			targetFolder = this.vault.getRoot();
+		} else {
 			// Validate non-root path
 			if (!PathUtils.isValidVaultPath(path)) {
 				return {
@@ -167,87 +163,31 @@ export class VaultTools {
 			}
 
 			// Normalize the path
-			normalizedPath = PathUtils.normalizePath(path);
+			const normalizedPath = PathUtils.normalizePath(path);
 
-			// Check if it's a folder
-			const folderObj = PathUtils.resolveFolder(this.app, normalizedPath);
+			// Get folder using adapter
+			const folderObj = this.vault.getAbstractFileByPath(normalizedPath);
+
 			if (!folderObj) {
-				// Check if it's a file instead
-				if (PathUtils.fileExists(this.app, normalizedPath)) {
-					return {
-						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
-						isError: true
-					};
-				}
-				
 				return {
 					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedPath) }],
 					isError: true
 				};
 			}
+
+			// Check if it's a folder
+			if (!(folderObj instanceof TFolder)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
+					isError: true
+				};
+			}
+
+			targetFolder = folderObj;
 		}
 
 		// Collect items based on recursive flag
-		const allFiles = this.app.vault.getAllLoadedFiles();
-		
-		for (const item of allFiles) {
-			// Skip the vault root itself
-			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
-				continue;
-			}
-
-			// Determine if this item should be included based on path
-			let shouldIncludeItem = false;
-
-			if (isRootPath) {
-				if (recursive) {
-					// Include all items in the vault
-					shouldIncludeItem = true;
-				} else {
-					// Include only direct children of root
-					const itemParent = item.parent?.path || '';
-					shouldIncludeItem = (itemParent === '' || itemParent === '/');
-				}
-			} else {
-				if (recursive) {
-					// Include items that are descendants of the target folder
-					shouldIncludeItem = item.path.startsWith(normalizedPath + '/') || item.path === normalizedPath;
-					// Exclude the folder itself
-					if (item.path === normalizedPath) {
-						shouldIncludeItem = false;
-					}
-				} else {
-					// Include only direct children of the target folder
-					const itemParent = item.parent?.path || '';
-					shouldIncludeItem = (itemParent === normalizedPath);
-				}
-			}
-
-			if (!shouldIncludeItem) {
-				continue;
-			}
-
-			// Apply glob filtering
-			if (!GlobUtils.shouldInclude(item.path, includes, excludes)) {
-				continue;
-			}
-
-			// Apply type filtering
-			if (item instanceof TFile) {
-				if (only === 'directories') {
-					continue;
-				}
-				
-				const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary);
-				items.push(fileMetadata);
-			} else if (item instanceof TFolder) {
-				if (only === 'files') {
-					continue;
-				}
-				
-				items.push(this.createDirectoryMetadata(item));
-			}
-		}
+		await this.collectItems(targetFolder, items, recursive, includes, excludes, only, withFrontmatterSummary);
 
 		// Sort: directories first, then files, alphabetically within each group
 		items.sort((a, b) => {
@@ -295,22 +235,64 @@ export class VaultTools {
 		};
 	}
 
+	/**
+	 * Helper method to recursively collect items from a folder
+	 */
+	private async collectItems(
+		folder: TFolder,
+		items: Array<FileMetadataWithFrontmatter | DirectoryMetadata>,
+		recursive: boolean,
+		includes?: string[],
+		excludes?: string[],
+		only?: 'files' | 'directories' | 'any',
+		withFrontmatterSummary?: boolean
+	): Promise<void> {
+		for (const item of folder.children) {
+			// Skip the vault root itself
+			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
+				continue;
+			}
+
+			// Apply glob filtering
+			if (!GlobUtils.shouldInclude(item.path, includes, excludes)) {
+				continue;
+			}
+
+			// Apply type filtering and add items
+			if (item instanceof TFile) {
+				if (only !== 'directories') {
+					const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary || false);
+					items.push(fileMetadata);
+				}
+			} else if (item instanceof TFolder) {
+				if (only !== 'files') {
+					items.push(this.createDirectoryMetadata(item));
+				}
+
+				// Recursively collect from subfolders if needed
+				if (recursive) {
+					await this.collectItems(item, items, recursive, includes, excludes, only, withFrontmatterSummary);
+				}
+			}
+		}
+	}
+
 	private async createFileMetadataWithFrontmatter(
-		file: TFile, 
+		file: TFile,
 		withFrontmatterSummary: boolean
 	): Promise<FileMetadataWithFrontmatter> {
 		const baseMetadata = this.createFileMetadata(file);
-		
+
 		if (!withFrontmatterSummary || file.extension !== 'md') {
 			return baseMetadata;
 		}
 
 		// Extract frontmatter without reading full content
 		try {
-			const cache = this.app.metadataCache.getFileCache(file);
+			const cache = this.metadata.getFileCache(file);
 			if (cache?.frontmatter) {
 				const summary: FrontmatterSummary = {};
-				
+
 				// Extract common frontmatter fields
 				if (cache.frontmatter.title) {
 					summary.title = cache.frontmatter.title;
@@ -403,14 +385,30 @@ export class VaultTools {
 		// Normalize the path
 		const normalizedPath = PathUtils.normalizePath(path);
 
+		// Get file or folder using adapter
+		const item = this.vault.getAbstractFileByPath(normalizedPath);
+
+		if (!item) {
+			// Path doesn't exist
+			const result: StatResult = {
+				path: normalizedPath,
+				exists: false
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
 		// Check if it's a file
-		const file = PathUtils.resolveFile(this.app, normalizedPath);
-		if (file) {
+		if (item instanceof TFile) {
 			const result: StatResult = {
 				path: normalizedPath,
 				exists: true,
 				kind: "file",
-				metadata: this.createFileMetadata(file)
+				metadata: this.createFileMetadata(item)
 			};
 			return {
 				content: [{
@@ -421,13 +419,12 @@ export class VaultTools {
 		}
 
 		// Check if it's a folder
-		const folder = PathUtils.resolveFolder(this.app, normalizedPath);
-		if (folder) {
+		if (item instanceof TFolder) {
 			const result: StatResult = {
 				path: normalizedPath,
 				exists: true,
 				kind: "directory",
-				metadata: this.createDirectoryMetadata(folder)
+				metadata: this.createDirectoryMetadata(item)
 			};
 			return {
 				content: [{
@@ -437,7 +434,7 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist
+		// Path doesn't exist (shouldn't reach here)
 		const result: StatResult = {
 			path: normalizedPath,
 			exists: false
@@ -462,8 +459,25 @@ export class VaultTools {
 		// Normalize the path
 		const normalizedPath = PathUtils.normalizePath(path);
 
+		// Get file or folder using adapter
+		const item = this.vault.getAbstractFileByPath(normalizedPath);
+
+		if (!item) {
+			// Path doesn't exist
+			const result: ExistsResult = {
+				path: normalizedPath,
+				exists: false
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
 		// Check if it's a file
-		if (PathUtils.fileExists(this.app, normalizedPath)) {
+		if (item instanceof TFile) {
 			const result: ExistsResult = {
 				path: normalizedPath,
 				exists: true,
@@ -478,7 +492,7 @@ export class VaultTools {
 		}
 
 		// Check if it's a folder
-		if (PathUtils.folderExists(this.app, normalizedPath)) {
+		if (item instanceof TFolder) {
 			const result: ExistsResult = {
 				path: normalizedPath,
 				exists: true,
@@ -492,7 +506,7 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist
+		// Path doesn't exist (shouldn't reach here)
 		const result: ExistsResult = {
 			path: normalizedPath,
 			exists: false
