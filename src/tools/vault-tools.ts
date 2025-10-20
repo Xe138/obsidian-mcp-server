@@ -16,33 +16,48 @@ export class VaultTools {
 	) {}
 
 	async getVaultInfo(): Promise<CallToolResult> {
-		const files = this.app.vault.getFiles();
-		const markdownFiles = this.app.vault.getMarkdownFiles();
-		const folders = this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder);
-		
-		// Calculate total size
-		let totalSize = 0;
-		for (const file of files) {
-			if (file instanceof TFile) {
-				totalSize += file.stat.size;
-			}
-		}
-		
-		const info: VaultInfo = {
-			name: this.app.vault.getName(),
-			path: (this.app.vault.adapter as any).basePath || 'Unknown',
-			totalFiles: files.length,
-			totalFolders: folders.length,
-			markdownFiles: markdownFiles.length,
-			totalSize: totalSize
-		};
+		try {
+			const allFiles = this.vault.getMarkdownFiles();
+			const totalNotes = allFiles.length;
 
-		return {
-			content: [{
-				type: "text",
-				text: JSON.stringify(info, null, 2)
-			}]
-		};
+			// Calculate total size
+			let totalSize = 0;
+			for (const file of allFiles) {
+				const stat = this.vault.stat(file);
+				if (stat) {
+					totalSize += stat.size;
+				}
+			}
+
+			const info = {
+				totalNotes,
+				totalSize,
+				sizeFormatted: this.formatBytes(totalSize)
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(info, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Get vault info error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	private formatBytes(bytes: number): string {
+		if (bytes === 0) return '0 Bytes';
+		const k = 1024;
+		const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 	}
 
 	async listNotes(path?: string): Promise<CallToolResult> {
@@ -544,25 +559,134 @@ export class VaultTools {
 		} = options;
 
 		try {
-			const { matches, stats } = await SearchUtils.search(this.app, {
-				query,
-				isRegex,
-				caseSensitive,
-				includes,
-				excludes,
-				folder,
-				returnSnippets,
-				snippetLength,
-				maxResults
-			});
+			// Compile search pattern
+			let searchPattern: RegExp;
+			try {
+				if (isRegex) {
+					const flags = caseSensitive ? 'g' : 'gi';
+					searchPattern = new RegExp(query, flags);
+				} else {
+					// Escape special regex characters for literal search
+					const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+					const flags = caseSensitive ? 'g' : 'gi';
+					searchPattern = new RegExp(escapedQuery, flags);
+				}
+			} catch (error) {
+				return {
+					content: [{
+						type: "text",
+						text: `Invalid regex pattern: ${(error as Error).message}`
+					}],
+					isError: true
+				};
+			}
+
+			// Get files to search using adapter
+			let files = this.vault.getMarkdownFiles();
+
+			// Filter by folder if specified
+			if (folder) {
+				const folderPath = folder.endsWith('/') ? folder : folder + '/';
+				files = files.filter(file =>
+					file.path.startsWith(folderPath) || file.path === folder
+				);
+			}
+
+			// Apply glob filtering
+			if (includes || excludes) {
+				files = files.filter(file =>
+					GlobUtils.shouldInclude(file.path, includes, excludes)
+				);
+			}
+
+			const matches: SearchMatch[] = [];
+			const filesWithMatches = new Set<string>();
+			let filesSearched = 0;
+
+			// Search through files
+			for (const file of files) {
+				if (matches.length >= maxResults) {
+					break;
+				}
+
+				filesSearched++;
+
+				try {
+					const content = await this.vault.read(file);
+					const lines = content.split('\n');
+
+					// Search in content
+					for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+						if (matches.length >= maxResults) {
+							break;
+						}
+
+						const line = lines[lineIndex];
+
+						// Reset regex lastIndex for global patterns
+						searchPattern.lastIndex = 0;
+
+						let match: RegExpExecArray | null;
+						while ((match = searchPattern.exec(line)) !== null) {
+							if (matches.length >= maxResults) {
+								break;
+							}
+
+							const columnIndex = match.index;
+							const matchText = match[0];
+
+							// Extract snippet with context
+							let snippet = line;
+							let snippetStart = 0;
+							let matchStart = columnIndex;
+
+							if (returnSnippets && line.length > snippetLength) {
+								// Calculate snippet boundaries
+								const halfSnippet = Math.floor(snippetLength / 2);
+								snippetStart = Math.max(0, columnIndex - halfSnippet);
+								const snippetEnd = Math.min(line.length, snippetStart + snippetLength);
+
+								// Adjust if we're at the end of the line
+								if (snippetEnd === line.length && line.length > snippetLength) {
+									snippetStart = Math.max(0, line.length - snippetLength);
+								}
+
+								snippet = line.substring(snippetStart, snippetEnd);
+								matchStart = columnIndex - snippetStart;
+							}
+
+							matches.push({
+								path: file.path,
+								line: lineIndex + 1, // 1-indexed
+								column: columnIndex + 1, // 1-indexed
+								snippet: snippet,
+								matchRanges: [{
+									start: matchStart,
+									end: matchStart + matchText.length
+								}]
+							});
+
+							filesWithMatches.add(file.path);
+
+							// Prevent infinite loop for zero-width matches
+							if (match[0].length === 0) {
+								searchPattern.lastIndex++;
+							}
+						}
+					}
+				} catch (error) {
+					// Skip files that can't be read
+					console.error(`Failed to search file ${file.path}:`, error);
+				}
+			}
 
 			const result: SearchResult = {
 				query,
 				isRegex,
 				matches,
-				totalMatches: stats.totalMatches,
-				filesSearched: stats.filesSearched,
-				filesWithMatches: stats.filesWithMatches
+				totalMatches: matches.length,
+				filesSearched,
+				filesWithMatches: filesWithMatches.size
 			};
 
 			return {
