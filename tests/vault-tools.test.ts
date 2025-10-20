@@ -45,6 +45,21 @@ describe('VaultTools', () => {
 			expect(parsed[2].kind).toBe('file');
 		});
 
+		it('should return error for invalid vault path', async () => {
+			// Mock PathUtils to fail validation
+			const PathUtils = require('../src/utils/path-utils').PathUtils;
+			const originalIsValid = PathUtils.isValidVaultPath;
+			PathUtils.isValidVaultPath = jest.fn().mockReturnValue(false);
+
+			const result = await vaultTools.listNotes('some/invalid/path');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('Invalid path');
+
+			// Restore original function
+			PathUtils.isValidVaultPath = originalIsValid;
+		});
+
 		it('should list files in a specific folder', async () => {
 			const mockFiles = [
 				createMockTFile('folder1/file1.md'),
@@ -739,6 +754,38 @@ describe('VaultTools', () => {
 			expect(parsed.matches[0].path).toBe('test.md');
 		});
 
+		it('should apply glob filtering to search results', async () => {
+			const mockFiles = [
+				createMockTFile('docs/readme.md'),
+				createMockTFile('tests/test.md'),
+				createMockTFile('src/code.md')
+			];
+			mockVault.getMarkdownFiles = jest.fn().mockReturnValue(mockFiles);
+			mockVault.read = jest.fn().mockResolvedValue('searchable content');
+
+			// Mock GlobUtils to only include docs folder
+			const GlobUtils = require('../src/utils/glob-utils').GlobUtils;
+			const originalShouldInclude = GlobUtils.shouldInclude;
+			GlobUtils.shouldInclude = jest.fn().mockImplementation((path: string) => {
+				return path.startsWith('docs/');
+			});
+
+			const result = await vaultTools.search({
+				query: 'searchable',
+				includes: ['docs/**'],
+				excludes: ['tests/**']
+			});
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			// Should only search in docs folder
+			expect(parsed.filesSearched).toBe(1);
+			expect(parsed.matches.every((m: any) => m.path.startsWith('docs/'))).toBe(true);
+
+			// Restore original function
+			GlobUtils.shouldInclude = originalShouldInclude;
+		});
+
 		it('should search with regex pattern', async () => {
 			const mockFile = createMockTFile('test.md');
 			mockVault.getMarkdownFiles = jest.fn().mockReturnValue([mockFile]);
@@ -1055,6 +1102,35 @@ describe('VaultTools', () => {
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('Invalid path');
+		});
+
+		it('should filter items using glob excludes', async () => {
+			const mockFiles = [
+				createMockTFile('include-me.md'),
+				createMockTFile('exclude-me.md'),
+				createMockTFile('also-include.md')
+			];
+			const mockRoot = createMockTFolder('', mockFiles);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+
+			// Mock GlobUtils to exclude specific file
+			const GlobUtils = require('../src/utils/glob-utils').GlobUtils;
+			const originalShouldInclude = GlobUtils.shouldInclude;
+			GlobUtils.shouldInclude = jest.fn().mockImplementation((path: string) => {
+				return !path.includes('exclude');
+			});
+
+			const result = await vaultTools.list({ excludes: ['**/exclude-*.md'] });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			// Should only include 2 files, excluding the one with "exclude" in name
+			expect(parsed.items.length).toBe(2);
+			expect(parsed.items.every((item: any) => !item.path.includes('exclude'))).toBe(true);
+
+			// Restore original function
+			GlobUtils.shouldInclude = originalShouldInclude;
 		});
 
 		it('should handle non-existent folder', async () => {
