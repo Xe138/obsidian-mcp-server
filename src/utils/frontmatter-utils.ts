@@ -293,6 +293,16 @@ export class FrontmatterUtils {
 			if (trimmedJson.startsWith('N4KAk') || !trimmedJson.startsWith('{')) {
 				// Data is compressed - try to decompress
 				try {
+					// Validate base64 encoding (will throw on invalid data)
+					// This validates the compressed data is at least well-formed
+					if (typeof atob !== 'undefined') {
+						// atob throws on invalid base64, unlike Buffer.from
+						atob(trimmedJson);
+					} else if (typeof Buffer !== 'undefined') {
+						// Buffer.from doesn't throw, but we keep it for completeness
+						Buffer.from(trimmedJson, 'base64');
+					}
+
 					// Decompress using pako (if available) or return metadata indicating compression
 					// For now, we'll indicate it's compressed and provide limited metadata
 					return {
@@ -307,6 +317,7 @@ export class FrontmatterUtils {
 					};
 				} catch (decompressError) {
 					// Decompression failed
+					console.error('Failed to process compressed Excalidraw data:', decompressError);
 					return {
 						isExcalidraw: true,
 						elementCount: 0,

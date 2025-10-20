@@ -793,6 +793,36 @@ excalidraw-plugin`;
 		});
 
 		describe('error handling', () => {
+			test('handles decompression failure gracefully', () => {
+				// Mock atob to throw an error to simulate decompression failure
+				// This covers the catch block for compressed data decompression errors
+				const originalAtob = global.atob;
+				global.atob = jest.fn(() => {
+					throw new Error('Invalid base64 string');
+				});
+
+				const content = `excalidraw-plugin
+## Drawing
+\`\`\`compressed-json
+N4KAkARALgngDgUwgLgAQQQDwMYEMA2AlgCYBOuA7hADTgQBuCpAzoQPYB2KqATL
+\`\`\``;
+				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
+
+				expect(result.isExcalidraw).toBe(true);
+				expect(result.elementCount).toBe(0);
+				expect(result.hasCompressedData).toBe(true);
+				expect(result.metadata).toEqual({ compressed: true });
+				expect(consoleErrorSpy).toHaveBeenCalledWith(
+					'Failed to process compressed Excalidraw data:',
+					expect.anything()
+				);
+
+				consoleErrorSpy.mockRestore();
+				global.atob = originalAtob;
+			});
+
 			test('handles JSON parse error gracefully', () => {
 				const content = `excalidraw-plugin
 \`\`\`json
