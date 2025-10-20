@@ -455,4 +455,127 @@ describe('VaultTools', () => {
 			expect(parsed.items[0].frontmatterSummary).toBeUndefined();
 		});
 	});
+
+	describe('getBacklinks', () => {
+		it('should return error if file not found', async () => {
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(null);
+
+			const result = await vaultTools.getBacklinks('nonexistent.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not found');
+		});
+
+		it('should return backlinks with snippets when includeSnippets is true', async () => {
+			const targetFile = createMockTFile('target.md');
+			const sourceFile = createMockTFile('source.md');
+
+			mockVault.getAbstractFileByPath = jest.fn()
+				.mockReturnValueOnce(targetFile)
+				.mockReturnValue(sourceFile);
+			mockVault.read = jest.fn().mockResolvedValue('This links to [[target]]');
+			mockMetadata.resolvedLinks = {
+				'source.md': {
+					'target.md': 1
+				}
+			};
+			mockMetadata.getFirstLinkpathDest = jest.fn().mockReturnValue(targetFile);
+
+			const result = await vaultTools.getBacklinks('target.md', false, true);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.backlinks).toBeDefined();
+			expect(parsed.backlinks.length).toBeGreaterThan(0);
+			expect(parsed.backlinks[0].occurrences[0].snippet).toBeTruthy();
+		});
+
+		it('should return backlinks without snippets when includeSnippets is false', async () => {
+			const targetFile = createMockTFile('target.md');
+			const sourceFile = createMockTFile('source.md');
+
+			mockVault.getAbstractFileByPath = jest.fn()
+				.mockReturnValueOnce(targetFile)
+				.mockReturnValue(sourceFile);
+			mockVault.read = jest.fn().mockResolvedValue('This links to [[target]]');
+			mockMetadata.resolvedLinks = {
+				'source.md': {
+					'target.md': 1
+				}
+			};
+			mockMetadata.getFirstLinkpathDest = jest.fn().mockReturnValue(targetFile);
+
+			const result = await vaultTools.getBacklinks('target.md', false, false);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.backlinks).toBeDefined();
+			expect(parsed.backlinks.length).toBeGreaterThan(0);
+			expect(parsed.backlinks[0].occurrences[0].snippet).toBe('');
+		});
+
+		it('should handle read errors gracefully', async () => {
+			const targetFile = createMockTFile('target.md');
+			const sourceFile = createMockTFile('source.md');
+
+			mockVault.getAbstractFileByPath = jest.fn()
+				.mockReturnValueOnce(targetFile)
+				.mockReturnValue(sourceFile);
+			mockVault.read = jest.fn().mockRejectedValue(new Error('Permission denied'));
+			mockMetadata.resolvedLinks = {
+				'source.md': {
+					'target.md': 1
+				}
+			};
+
+			const result = await vaultTools.getBacklinks('target.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('error');
+		});
+	});
+
+	describe('validateWikilinks', () => {
+		it('should return error if file not found', async () => {
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(null);
+
+			const result = await vaultTools.validateWikilinks('nonexistent.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('not found');
+		});
+
+		it('should handle read errors gracefully', async () => {
+			const mockFile = createMockTFile('test.md');
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockRejectedValue(new Error('Read error'));
+
+			const result = await vaultTools.validateWikilinks('test.md');
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('error');
+		});
+
+		it('should validate wikilinks successfully', async () => {
+			const mockFile = createMockTFile('test.md');
+			const linkedFile = createMockTFile('linked.md');
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue('This is a [[linked]] note and a [[broken]] link.');
+			mockVault.getMarkdownFiles = jest.fn().mockReturnValue([linkedFile]);
+			mockMetadata.getFirstLinkpathDest = jest.fn()
+				.mockReturnValueOnce(linkedFile)
+				.mockReturnValueOnce(null);
+
+			const result = await vaultTools.validateWikilinks('test.md');
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.path).toBe('test.md');
+			expect(parsed.totalLinks).toBe(2);
+			expect(parsed.resolvedLinks.length).toBe(1);
+			expect(parsed.unresolvedLinks.length).toBe(1);
+		});
+	});
 });
