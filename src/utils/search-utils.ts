@@ -1,6 +1,7 @@
-import { App, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { SearchMatch } from '../types/mcp-types';
 import { GlobUtils } from './glob-utils';
+import { IVaultAdapter } from '../adapters/interfaces';
 
 export interface SearchOptions {
 	query: string;
@@ -25,7 +26,7 @@ export class SearchUtils {
 	 * Search vault files with advanced filtering and regex support
 	 */
 	static async search(
-		app: App,
+		vault: IVaultAdapter,
 		options: SearchOptions
 	): Promise<{ matches: SearchMatch[]; stats: SearchStatistics }> {
 		const {
@@ -61,7 +62,7 @@ export class SearchUtils {
 		}
 
 		// Get files to search
-		let files = app.vault.getMarkdownFiles();
+		let files = vault.getMarkdownFiles();
 
 		// Filter by folder if specified
 		if (folder) {
@@ -87,7 +88,7 @@ export class SearchUtils {
 			filesSearched++;
 			
 			try {
-				const content = await app.vault.read(file);
+				const content = await vault.read(file);
 				const fileMatches = this.searchInFile(
 					file,
 					content,
@@ -246,7 +247,7 @@ export class SearchUtils {
 	 * Search for Waypoint markers in vault
 	 */
 	static async searchWaypoints(
-		app: App,
+		vault: IVaultAdapter,
 		folder?: string
 	): Promise<Array<{
 		path: string;
@@ -264,7 +265,7 @@ export class SearchUtils {
 		}> = [];
 
 		// Get files to search
-		let files = app.vault.getMarkdownFiles();
+		let files = vault.getMarkdownFiles();
 
 		// Filter by folder if specified
 		if (folder) {
@@ -281,7 +282,7 @@ export class SearchUtils {
 
 		for (const file of files) {
 			try {
-				const content = await app.vault.read(file);
+				const content = await vault.read(file);
 				const lines = content.split('\n');
 
 				let inWaypoint = false;
