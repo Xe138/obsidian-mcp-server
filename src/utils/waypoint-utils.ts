@@ -1,4 +1,5 @@
-import { App, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
+import { IVaultAdapter } from '../adapters/interfaces';
 
 /**
  * Waypoint block information
@@ -87,7 +88,7 @@ export class WaypointUtils {
 	 * 1. Has the same basename as its parent folder, OR
 	 * 2. Contains waypoint markers
 	 */
-	static async isFolderNote(app: App, file: TFile): Promise<FolderNoteInfo> {
+	static async isFolderNote(vault: IVaultAdapter, file: TFile): Promise<FolderNoteInfo> {
 		const basename = file.basename;
 		const parentFolder = file.parent;
 
@@ -97,7 +98,7 @@ export class WaypointUtils {
 		// Check for waypoint markers
 		let hasWaypoint = false;
 		try {
-			const content = await app.vault.read(file);
+			const content = await vault.read(file);
 			hasWaypoint = this.hasWaypointMarker(content);
 		} catch (error) {
 			// If we can't read the file, we can't check for waypoints
