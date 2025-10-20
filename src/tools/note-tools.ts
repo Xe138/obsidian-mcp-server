@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
-import { 
-	CallToolResult, 
-	ParsedNote, 
+import {
+	CallToolResult,
+	ParsedNote,
 	ExcalidrawMetadata,
 	UpdateFrontmatterResult,
 	UpdateSectionsResult,
@@ -16,9 +16,14 @@ import { ErrorMessages } from '../utils/error-messages';
 import { FrontmatterUtils } from '../utils/frontmatter-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { VersionUtils } from '../utils/version-utils';
+import { IVaultAdapter, IFileManagerAdapter } from '../adapters/interfaces';
 
 export class NoteTools {
-	constructor(private app: App) {}
+	constructor(
+		private vault: IVaultAdapter,
+		private fileManager: IFileManagerAdapter,
+		private app: App  // Keep temporarily for methods not yet migrated
+	) {}
 
 	async readNote(
 		path: string,
@@ -67,7 +72,7 @@ export class NoteTools {
 		}
 
 		try {
-			const content = await this.app.vault.read(file);
+			const content = await this.vault.read(file);
 
 			// If no special options, return simple content
 			if (!parseFrontmatter) {
@@ -145,7 +150,7 @@ export class NoteTools {
 				// Delete existing file before creating
 				const existingFile = PathUtils.resolveFile(this.app, normalizedPath);
 				if (existingFile) {
-					await this.app.vault.delete(existingFile);
+					await this.vault.delete(existingFile);
 				}
 			} else if (onConflict === 'rename') {
 				// Generate a unique name
@@ -198,7 +203,7 @@ export class NoteTools {
 
 		// Proceed with file creation
 		try {
-			const file = await this.app.vault.create(finalPath, content);
+			const file = await this.vault.create(finalPath, content);
 			
 			const result: CreateNoteResult = {
 				success: true,
@@ -252,7 +257,7 @@ export class NoteTools {
 		
 		// Create the current folder if it doesn't exist
 		if (!PathUtils.pathExists(this.app, path)) {
-			await this.app.vault.createFolder(path);
+			await this.vault.createFolder(path);
 		}
 	}
 
@@ -292,7 +297,7 @@ export class NoteTools {
 
 		try {
 			// Check for waypoint edit protection
-			const currentContent = await this.app.vault.read(file);
+			const currentContent = await this.vault.read(file);
 			const waypointCheck = WaypointUtils.wouldAffectWaypoint(currentContent, content);
 			
 			if (waypointCheck.affected) {
@@ -313,7 +318,7 @@ export class NoteTools {
 				};
 			}
 
-			await this.app.vault.modify(file, content);
+			await this.vault.modify(file, content);
 			return {
 				content: [{ type: "text", text: `Note updated successfully: ${file.path}` }]
 			};
@@ -424,7 +429,7 @@ export class NoteTools {
 
 			// Use Obsidian's FileManager to rename (automatically updates links)
 			// Note: Obsidian's renameFile automatically updates all wikilinks
-			await this.app.fileManager.renameFile(file, normalizedNewPath);
+			await this.fileManager.renameFile(file, normalizedNewPath);
 
 			// Get the renamed file to get version info
 			const renamedFile = PathUtils.resolveFile(this.app, normalizedNewPath);
@@ -524,11 +529,11 @@ export class NoteTools {
 			// Perform actual deletion
 			if (soft) {
 				// Move to trash using Obsidian's trash method
-				await this.app.vault.trash(file, true);
+				await this.vault.trash(file, true);
 				destination = `.trash/${file.name}`;
 			} else {
 				// Permanent deletion
-				await this.app.vault.delete(file);
+				await this.vault.delete(file);
 			}
 
 			const result: DeleteNoteResult = {
@@ -595,7 +600,7 @@ export class NoteTools {
 		}
 
 		try {
-			const content = await this.app.vault.read(file);
+			const content = await this.vault.read(file);
 
 			// Parse Excalidraw metadata (gracefully handles malformed files)
 			const metadata = FrontmatterUtils.parseExcalidrawMetadata(content);
@@ -725,7 +730,7 @@ export class NoteTools {
 			}
 
 			// Read current content
-			const content = await this.app.vault.read(file);
+			const content = await this.vault.read(file);
 			const extracted = FrontmatterUtils.extractFrontmatter(content);
 
 			// Get current frontmatter or create new
@@ -767,7 +772,7 @@ export class NoteTools {
 			}
 
 			// Write back
-			await this.app.vault.modify(file, newContent);
+			await this.vault.modify(file, newContent);
 
 			// Generate response with version info
 			const result: UpdateFrontmatterResult = {
@@ -851,7 +856,7 @@ export class NoteTools {
 			}
 
 			// Read current content
-			const content = await this.app.vault.read(file);
+			const content = await this.vault.read(file);
 			const lines = content.split('\n');
 
 			// Sort edits by startLine in descending order to apply from bottom to top
@@ -891,7 +896,7 @@ export class NoteTools {
 			const newContent = lines.join('\n');
 
 			// Write back
-			await this.app.vault.modify(file, newContent);
+			await this.vault.modify(file, newContent);
 
 			// Generate response with version info
 			const result: UpdateSectionsResult = {

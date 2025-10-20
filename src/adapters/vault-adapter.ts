@@ -38,4 +38,16 @@ export class VaultAdapter implements IVaultAdapter {
 	async create(path: string, data: string): Promise<TFile> {
 		return this.vault.create(path, data);
 	}
+
+	async modify(file: TFile, data: string): Promise<void> {
+		await this.vault.modify(file, data);
+	}
+
+	async delete(file: TAbstractFile): Promise<void> {
+		await this.vault.delete(file);
+	}
+
+	async trash(file: TAbstractFile, system: boolean): Promise<void> {
+		await this.vault.trash(file, system);
+	}
 }

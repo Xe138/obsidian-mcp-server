@@ -25,6 +25,13 @@ export interface IVaultAdapter {
 
 	// File creation
 	create(path: string, data: string): Promise<TFile>;
+
+	// File modification
+	modify(file: TFile, data: string): Promise<void>;
+
+	// File deletion
+	delete(file: TAbstractFile): Promise<void>;
+	trash(file: TAbstractFile, system: boolean): Promise<void>;
 }
 
 /**

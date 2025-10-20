@@ -2,6 +2,7 @@ import { App } from 'obsidian';
 import { Tool, CallToolResult } from '../types/mcp-types';
 import { NoteTools } from './note-tools';
 import { VaultTools } from './vault-tools';
+import { createNoteTools } from './note-tools-factory';
 import { createVaultTools } from './vault-tools-factory';
 import { NotificationManager } from '../ui/notifications';
 
@@ -11,7 +12,7 @@ export class ToolRegistry {
 	private notificationManager: NotificationManager | null = null;
 
 	constructor(app: App) {
-		this.noteTools = new NoteTools(app);
+		this.noteTools = createNoteTools(app);
 		this.vaultTools = createVaultTools(app);
 	}
 
