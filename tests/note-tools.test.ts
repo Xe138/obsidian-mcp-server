@@ -168,6 +168,28 @@ describe('NoteTools', () => {
 			expect(parsed.originalPath).toBe('test.md');
 		});
 
+		it('should create file with incremented counter when conflicts exist', async () => {
+			const mockFile = createMockTFile('test 3.md');
+
+			(PathUtils.fileExists as jest.Mock)
+				.mockReturnValueOnce(true)   // Original test.md exists
+				.mockReturnValueOnce(true)   // test 1.md exists
+				.mockReturnValueOnce(true)   // test 2.md exists
+				.mockReturnValueOnce(false); // test 3.md doesn't exist
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(false);
+			(PathUtils.getParentPath as jest.Mock).mockReturnValue('');
+			mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+			const result = await noteTools.createNote('test.md', 'content', false, 'rename');
+
+			expect(result.isError).toBeUndefined();
+			expect(mockVault.create).toHaveBeenCalledWith('test 3.md', 'content');
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.renamed).toBe(true);
+			expect(parsed.originalPath).toBe('test.md');
+			expect(parsed.path).toBe('test 3.md');
+		});
+
 		it('should return error if parent folder does not exist and createParents is false', async () => {
 			(PathUtils.fileExists as jest.Mock).mockReturnValue(false);
 			(PathUtils.folderExists as jest.Mock).mockReturnValue(false);
