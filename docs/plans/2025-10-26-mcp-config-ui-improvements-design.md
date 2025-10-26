@@ -1,7 +1,7 @@
 # MCP Configuration UI Improvements - Design Document
 
 **Date:** 2025-10-26
-**Status:** Approved
+**Status:** Implemented
 **Author:** Design brainstorming session
 
 ## Overview
