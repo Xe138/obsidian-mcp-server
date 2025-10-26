@@ -5,16 +5,75 @@ import { generateApiKey } from './utils/auth-utils';
 
 export class MCPServerSettingTab extends PluginSettingTab {
 	plugin: MCPServerPlugin;
+	private notificationDetailsEl: HTMLDetailsElement | null = null;
 
 	constructor(app: App, plugin: MCPServerPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
+	/**
+	 * Render notification settings (Show parameters, Notification duration, Log to console, View history)
+	 */
+	private renderNotificationSettings(parent: HTMLElement): void {
+		// Show parameters
+		new Setting(parent)
+			.setName('Show parameters')
+			.setDesc('Include tool parameters in notifications')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showParameters)
+				.onChange(async (value) => {
+					this.plugin.settings.showParameters = value;
+					await this.plugin.saveSettings();
+					this.plugin.updateNotificationManager();
+				}));
+
+		// Notification duration
+		new Setting(parent)
+			.setName('Notification duration')
+			.setDesc('Duration in milliseconds')
+			.addText(text => text
+				.setPlaceholder('3000')
+				.setValue(String(this.plugin.settings.notificationDuration))
+				.onChange(async (value) => {
+					const duration = parseInt(value);
+					if (!isNaN(duration) && duration > 0) {
+						this.plugin.settings.notificationDuration = duration;
+						await this.plugin.saveSettings();
+						this.plugin.updateNotificationManager();
+					}
+				}));
+
+		// Log to console
+		new Setting(parent)
+			.setName('Log to console')
+			.setDesc('Log tool calls to console')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.logToConsole)
+				.onChange(async (value) => {
+					this.plugin.settings.logToConsole = value;
+					await this.plugin.saveSettings();
+					this.plugin.updateNotificationManager();
+				}));
+
+		// View history button
+		new Setting(parent)
+			.setName('Notification history')
+			.setDesc('View recent MCP tool calls')
+			.addButton(button => button
+				.setButtonText('View History')
+				.onClick(() => {
+					this.plugin.showNotificationHistory();
+				}));
+	}
+
 	display(): void {
 		const {containerEl} = this;
 
 		containerEl.empty();
+
+		// Clear notification details reference for fresh render
+		this.notificationDetailsEl = null;
 
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
 
@@ -205,6 +264,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		notifSummary.style.cursor = 'pointer';
 		notifSummary.setText('UI Notifications');
 
+		// Store reference for targeted updates
+		this.notificationDetailsEl = notifDetails;
+
 		// Enable notifications
 		new Setting(notifDetails)
 			.setName('Enable notifications')
@@ -215,60 +277,40 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					this.plugin.settings.notificationsEnabled = value;
 					await this.plugin.saveSettings();
 					this.plugin.updateNotificationManager();
-					this.display();
+					this.updateNotificationSection();
 				}));
 
 		// Show notification settings only if enabled
 		if (this.plugin.settings.notificationsEnabled) {
-			// Show parameters
-			new Setting(notifDetails)
-				.setName('Show parameters')
-				.setDesc('Include tool parameters in notifications')
-				.addToggle(toggle => toggle
-					.setValue(this.plugin.settings.showParameters)
-					.onChange(async (value) => {
-						this.plugin.settings.showParameters = value;
-						await this.plugin.saveSettings();
-						this.plugin.updateNotificationManager();
-					}));
-
-			// Notification duration
-			new Setting(notifDetails)
-				.setName('Notification duration')
-				.setDesc('Duration in milliseconds')
-				.addText(text => text
-					.setPlaceholder('3000')
-					.setValue(String(this.plugin.settings.notificationDuration))
-					.onChange(async (value) => {
-						const duration = parseInt(value);
-						if (!isNaN(duration) && duration > 0) {
-							this.plugin.settings.notificationDuration = duration;
-							await this.plugin.saveSettings();
-							this.plugin.updateNotificationManager();
-						}
-					}));
-
-			// Log to console
-			new Setting(notifDetails)
-				.setName('Log to console')
-				.setDesc('Log tool calls to console')
-				.addToggle(toggle => toggle
-					.setValue(this.plugin.settings.logToConsole)
-					.onChange(async (value) => {
-						this.plugin.settings.logToConsole = value;
-						await this.plugin.saveSettings();
-						this.plugin.updateNotificationManager();
-					}));
-
-			// View history button
-			new Setting(notifDetails)
-				.setName('Notification history')
-				.setDesc('View recent MCP tool calls')
-				.addButton(button => button
-					.setButtonText('View History')
-					.onClick(() => {
-						this.plugin.showNotificationHistory();
-					}));
+			this.renderNotificationSettings(notifDetails);
 		}
+	}
+
+	/**
+	 * Update only the notification section without re-rendering entire page
+	 */
+	private updateNotificationSection(): void {
+		if (!this.notificationDetailsEl) {
+			// Fallback to full re-render if reference lost
+			this.display();
+			return;
+		}
+
+		// Store current open state
+		const wasOpen = this.notificationDetailsEl.open;
+
+		// Find and remove all child elements except the summary
+		const summary = this.notificationDetailsEl.querySelector('summary');
+		while (this.notificationDetailsEl.lastChild && this.notificationDetailsEl.lastChild !== summary) {
+			this.notificationDetailsEl.removeChild(this.notificationDetailsEl.lastChild);
+		}
+
+		// Rebuild notification settings
+		if (this.plugin.settings.notificationsEnabled) {
+			this.renderNotificationSettings(this.notificationDetailsEl);
+		}
+
+		// Restore open state
+		this.notificationDetailsEl.open = wasOpen;
 	}
 }
