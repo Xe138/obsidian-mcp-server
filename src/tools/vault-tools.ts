@@ -342,7 +342,6 @@ export class VaultTools {
 			}
 		} catch (error) {
 			// If frontmatter extraction fails, just return base metadata
-			console.error(`Failed to extract frontmatter for ${file.path}:`, error);
 		}
 
 		return baseMetadata;
@@ -685,7 +684,6 @@ export class VaultTools {
 					}
 				} catch (error) {
 					// Skip files that can't be read
-					console.error(`Failed to search file ${file.path}:`, error);
 				}
 			}
 

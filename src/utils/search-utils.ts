@@ -116,7 +116,6 @@ export class SearchUtils {
 				}
 			} catch (error) {
 				// Skip files that can't be read
-				console.error(`Failed to search file ${file.path}:`, error);
 			}
 		}
 
@@ -325,7 +324,7 @@ export class SearchUtils {
 					}
 				}
 			} catch (error) {
-				console.error(`Failed to search waypoints in ${file.path}:`, error);
+				// Skip files that can't be searched
 			}
 		}
 

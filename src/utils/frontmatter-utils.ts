@@ -64,7 +64,6 @@ export class FrontmatterUtils {
 			parsedFrontmatter = parseYaml(frontmatter) || {};
 		} catch (error) {
 			// If parsing fails, return null for parsed frontmatter
-			console.error('Failed to parse frontmatter:', error);
 			parsedFrontmatter = null;
 		}
 
@@ -318,7 +317,6 @@ export class FrontmatterUtils {
 					};
 				} catch (decompressError) {
 					// Decompression failed
-					console.error('Failed to process compressed Excalidraw data:', decompressError);
 					return {
 						isExcalidraw: true,
 						elementCount: 0,
@@ -350,10 +348,8 @@ export class FrontmatterUtils {
 			// If parsing fails, return with default values
 			const isExcalidraw = content.includes('excalidraw-plugin') || 
 								 content.includes('"type":"excalidraw"');
-			
-			// Log error for debugging
-			console.error('Excalidraw parsing error:', error);
-			
+
+
 			return {
 				isExcalidraw: isExcalidraw,
 				elementCount: isExcalidraw ? 0 : undefined,

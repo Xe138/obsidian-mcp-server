@@ -158,8 +158,7 @@ describe('FrontmatterUtils', () => {
 		describe('parse errors', () => {
 			test('handles parseYaml throwing error', () => {
 				const content = '---\ninvalid: yaml: content:\n---\nContent';
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-				mockParseYaml.mockImplementation(() => {
+					mockParseYaml.mockImplementation(() => {
 					throw new Error('Invalid YAML');
 				});
 
@@ -169,13 +168,8 @@ describe('FrontmatterUtils', () => {
 				expect(result.frontmatter).toBe('invalid: yaml: content:');
 				expect(result.parsedFrontmatter).toBe(null);
 				expect(result.contentWithoutFrontmatter).toBe('Content');
-				expect(consoleErrorSpy).toHaveBeenCalledWith(
-					'Failed to parse frontmatter:',
-					expect.any(Error)
-				);
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 
 			test('handles parseYaml returning null', () => {
 				const content = '---\ntitle: Test\n---\nContent';
@@ -806,21 +800,15 @@ excalidraw-plugin`;
 \`\`\`compressed-json
 N4KAkARALgngDgUwgLgAQQQDwMYEMA2AlgCYBOuA7hADTgQBuCpAzoQPYB2KqATL
 \`\`\``;
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
 
 				expect(result.isExcalidraw).toBe(true);
 				expect(result.elementCount).toBe(0);
 				expect(result.hasCompressedData).toBe(true);
 				expect(result.metadata).toEqual({ compressed: true });
-				expect(consoleErrorSpy).toHaveBeenCalledWith(
-					'Failed to process compressed Excalidraw data:',
-					expect.anything()
-				);
 
-				consoleErrorSpy.mockRestore();
-				global.atob = originalAtob;
+					global.atob = originalAtob;
 			});
 
 			test('handles JSON parse error gracefully', () => {
@@ -828,28 +816,21 @@ N4KAkARALgngDgUwgLgAQQQDwMYEMA2AlgCYBOuA7hADTgQBuCpAzoQPYB2KqATL
 \`\`\`json
 {invalid json content}
 \`\`\``;
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
 
 				expect(result.isExcalidraw).toBe(true);
 				expect(result.elementCount).toBe(0);
 				expect(result.hasCompressedData).toBe(false);
 				expect(result.metadata).toEqual({});
-				expect(consoleErrorSpy).toHaveBeenCalledWith(
-					'Excalidraw parsing error:',
-					expect.any(Error)
-				);
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 
 			test('handles error when no Excalidraw marker present', () => {
 				const content = `\`\`\`json
 {invalid json}
 \`\`\``;
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
 
 				expect(result.isExcalidraw).toBe(false);
@@ -857,21 +838,18 @@ N4KAkARALgngDgUwgLgAQQQDwMYEMA2AlgCYBOuA7hADTgQBuCpAzoQPYB2KqATL
 				expect(result.hasCompressedData).toBeUndefined();
 				expect(result.metadata).toBeUndefined();
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 
 			test('logs error but returns valid result structure', () => {
 				const content = 'excalidraw-plugin with error causing content';
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				// Force an error by making content throw during processing
 				const result = FrontmatterUtils.parseExcalidrawMetadata(content);
 
 				// Should still return valid structure
 				expect(result).toHaveProperty('isExcalidraw');
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 		});
 
 		describe('edge cases', () => {

@@ -102,7 +102,6 @@ export class WaypointUtils {
 			hasWaypoint = this.hasWaypointMarker(content);
 		} catch (error) {
 			// If we can't read the file, we can't check for waypoints
-			console.error(`Failed to read file ${file.path}:`, error);
 		}
 
 		// Determine result

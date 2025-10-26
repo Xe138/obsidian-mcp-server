@@ -618,8 +618,7 @@ describe('SearchUtils', () => {
 						.mockResolvedValueOnce('test content')
 				});
 
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const options: SearchOptions = {
 					query: 'test'
 				};
@@ -628,13 +627,8 @@ describe('SearchUtils', () => {
 
 				expect(result.stats.filesSearched).toBe(3);
 				expect(result.stats.filesWithMatches).toBe(2); // Only good files
-				expect(consoleErrorSpy).toHaveBeenCalledWith(
-					expect.stringContaining('Failed to search file bad.md'),
-					expect.any(Error)
-				);
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 		});
 
 		describe('statistics', () => {
@@ -1024,19 +1018,13 @@ Just some text
 						.mockRejectedValueOnce(new Error('Read error'))
 				});
 
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const result = await SearchUtils.searchWaypoints(mockVault);
 
 				expect(result).toHaveLength(1);
 				expect(result[0].path).toBe('good.md');
-				expect(consoleErrorSpy).toHaveBeenCalledWith(
-					expect.stringContaining('Failed to search waypoints in bad.md'),
-					expect.any(Error)
-				);
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 
 			it('should continue searching after encountering errors', async () => {
 				const mockVault = createMockVaultAdapter({
@@ -1055,16 +1043,14 @@ Just some text
 %% End Waypoint %%`)
 				});
 
-				const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
+	
 				const result = await SearchUtils.searchWaypoints(mockVault);
 
 				expect(result).toHaveLength(2);
 				expect(result[0].links).toEqual(['A']);
 				expect(result[1].links).toEqual(['B']);
 
-				consoleErrorSpy.mockRestore();
-			});
+				});
 		});
 	});
 });

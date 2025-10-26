@@ -296,19 +296,13 @@ Content without end`;
 			file.basename = 'Projects';
 			file.parent = folder;
 
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 			(mockVault.read as jest.Mock).mockRejectedValue(new Error('Read failed'));
 
 			const result = await WaypointUtils.isFolderNote(mockVault, file);
 
 			expect(result.isFolderNote).toBe(true);
 			expect(result.reason).toBe('basename_match');
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Failed to read file Projects/Projects.md'),
-				expect.any(Error)
-			);
 
-			consoleErrorSpy.mockRestore();
 		});
 
 		test('handles file read error - waypoint cannot be detected', async () => {
@@ -317,16 +311,13 @@ Content without end`;
 			file.basename = 'Index';
 			file.parent = folder;
 
-			const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 			(mockVault.read as jest.Mock).mockRejectedValue(new Error('Read failed'));
 
 			const result = await WaypointUtils.isFolderNote(mockVault, file);
 
 			expect(result.isFolderNote).toBe(false);
 			expect(result.reason).toBe('none');
-			expect(consoleErrorSpy).toHaveBeenCalled();
 
-			consoleErrorSpy.mockRestore();
 		});
 
 		test('handles unclosed waypoint as no waypoint', async () => {
