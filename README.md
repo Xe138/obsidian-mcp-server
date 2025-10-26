@@ -1,13 +1,13 @@
 # Obsidian MCP Server Plugin
 
-An Obsidian plugin that exposes your vault operations via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) over HTTP. This allows AI assistants and other MCP clients to interact with your Obsidian vault programmatically.
+An Obsidian plugin that makes your vault accessible via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) over HTTP. This allows AI assistants and other MCP clients to interact with your Obsidian vault programmatically.
 
 ## Features
 
 - **HTTP MCP Server**: Runs an HTTP server implementing the MCP protocol
 - **Vault Operations**: Exposes tools for reading, creating, updating, and deleting notes
 - **Search Functionality**: Search notes by content or filename
-- **Security**: Localhost-only binding, optional authentication, CORS configuration
+- **Security**: Localhost-only binding, mandatory authentication, encrypted API key storage
 - **Easy Configuration**: Simple settings UI with server status and controls
 
 ## Available MCP Tools
@@ -68,12 +68,13 @@ An Obsidian plugin that exposes your vault operations via the [Model Context Pro
 2. Configure the following options:
    - **Port**: HTTP server port (default: 3000)
    - **Auto-start**: Automatically start server on Obsidian launch
-   - **Enable CORS**: Allow cross-origin requests
-   - **Allowed Origins**: Comma-separated list of allowed origins
-   - **Enable Authentication**: Require API key for requests
-   - **API Key**: Bearer token for authentication
+   - **API Key**: Auto-generated, encrypted authentication token (can regenerate in settings)
 
 3. Click "Start Server" or use the ribbon icon to toggle the server
+
+### Authentication
+
+Authentication is **mandatory** and cannot be disabled. An API key is automatically generated when you first install the plugin and is encrypted using your system's secure credential storage (macOS Keychain, Windows Credential Manager, Linux Secret Service where available).
 
 ## Usage
 
@@ -95,15 +96,16 @@ Example client configuration (e.g., for Claude Desktop):
 {
   "mcpServers": {
     "obsidian": {
-      "url": "http://127.0.0.1:3000/mcp"
+      "url": "http://127.0.0.1:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
     }
   }
 }
 ```
 
-### Using with Authentication
-
-If authentication is enabled, include the API key in requests:
+Get your API key from the plugin settings. All requests must include the Bearer token:
 ```bash
 curl -X POST http://127.0.0.1:3000/mcp \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -187,9 +189,13 @@ curl -X POST http://127.0.0.1:3000/mcp \
 
 ## Security Considerations
 
-- **Localhost Only**: The server binds to `127.0.0.1` to prevent external access
-- **Origin Validation**: Validates request origins to prevent DNS rebinding attacks
-- **Optional Authentication**: Use API keys to restrict access
+The plugin implements multiple security layers:
+
+- **Network binding**: Server binds to `127.0.0.1` only (no external access)
+- **Host header validation**: Prevents DNS rebinding attacks
+- **CORS policy**: Fixed localhost-only policy allows web-based clients on `localhost` or `127.0.0.1` (any port)
+- **Mandatory authentication**: All requests require Bearer token
+- **Encrypted storage**: API keys encrypted using system keychain when available
 - **Desktop Only**: This plugin only works on desktop (not mobile) due to HTTP server requirements
 
 ## Development

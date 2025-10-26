@@ -150,21 +150,27 @@ The server implements MCP version `2024-11-05`:
 ## Security Model
 
 - Server binds to `127.0.0.1` only (no external access)
-- Origin validation prevents DNS rebinding attacks
-- Optional Bearer token authentication via `enableAuth` + `apiKey` settings
-- CORS configurable via settings for local MCP clients
+- Host header validation prevents DNS rebinding attacks
+- CORS fixed to localhost-only origins (`http(s)://localhost:*`, `http(s)://127.0.0.1:*`)
+- **Mandatory authentication** via Bearer token (auto-generated on first install)
+- API keys encrypted using Electron's safeStorage API (system keychain: macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- Encryption falls back to plaintext on systems without secure storage (e.g., Linux without keyring)
 
 ## Settings
 
 MCPPluginSettings (src/types/settings-types.ts):
 - `port`: HTTP server port (default: 3000)
 - `autoStart`: Start server on plugin load
-- `enableCORS`: Enable CORS middleware
-- `allowedOrigins`: Comma-separated origin whitelist
-- `enableAuth`: Require Bearer token
-- `apiKey`: Authentication token
+- `apiKey`: Required authentication token (encrypted at rest using Electron's safeStorage)
+- `enableAuth`: Always true (kept for backward compatibility during migration)
 - `notificationsEnabled`: Show tool call notifications in Obsidian UI
+- `showParameters`: Include parameters in notifications
 - `notificationDuration`: Auto-dismiss time for notifications
+- `logToConsole`: Log tool calls to console
+
+**Removed settings** (as of implementation plan 2025-10-25):
+- `enableCORS`: CORS is now always enabled with fixed localhost-only policy
+- `allowedOrigins`: Origin allowlist removed, only localhost origins allowed
 
 ## Waypoint Plugin Integration
 
