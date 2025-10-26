@@ -15,7 +15,7 @@ Thank you for your interest in contributing to the Obsidian MCP Server Plugin! T
 
 ## Code of Conduct
 
-We are committed to providing a welcoming and inclusive environment. Please be respectful and constructive in all interactions.
+This project is committed to providing a welcoming and inclusive environment. Please be respectful and constructive in all interactions.
 
 ## Getting Started
 
@@ -100,7 +100,7 @@ For feature requests, please describe:
    - `refactor/cleanup-utils` for refactoring
 
 2. **Make your changes:**
-   - Write code following our [Code Guidelines](#code-guidelines)
+   - Write code following the [Code Guidelines](#code-guidelines)
    - Add tests for new functionality
    - Update documentation as needed
 
@@ -305,7 +305,7 @@ Before submitting, ensure:
 
 ### Versioning
 
-We use [Semantic Versioning](https://semver.org/):
+This project uses [Semantic Versioning](https://semver.org/):
 - **Major** (1.0.0): Breaking changes
 - **Minor** (0.1.0): New features, backward compatible
 - **Patch** (0.0.1): Bug fixes, backward compatible

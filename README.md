@@ -284,13 +284,23 @@ npm run build  # Production build
 
 ## Contributing
 
-Contributions are welcome! If you'd like to contribute to this plugin:
+Contributions are welcome! Please see the [Contributing Guidelines](CONTRIBUTING.md) for detailed information on:
+
+- Development setup and workflow
+- Code style and architecture guidelines
+- Testing requirements
+- Pull request process
+- Release procedures
+
+### Quick Start for Contributors
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes with tests
+4. Run `npm test` and `npm run build`
+5. Commit your changes
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ### Reporting Issues
 
@@ -301,6 +311,7 @@ Found a bug or have a feature request? Please open an issue on GitHub:
 When reporting bugs, please include:
 - Obsidian version
 - Plugin version
+- Operating system
 - Steps to reproduce the issue
 - Any error messages from the Developer Console (Ctrl+Shift+I)
 

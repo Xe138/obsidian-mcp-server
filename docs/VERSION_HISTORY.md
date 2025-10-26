@@ -10,7 +10,7 @@ This plugin's first public release is marked as **version 1.0.0**.
 
 Prior to public release, the plugin went through private development with internal versions 1.0.0 through 3.0.0. These versions were used during development and testing but were never publicly released.
 
-When preparing for public release, we reset the version to 1.0.0 to clearly mark this as the first public version available to users.
+When preparing for public release, the version was reset to 1.0.0 to clearly mark this as the first public version available to users.
 
 ### Why Reset to 1.0.0?
 
