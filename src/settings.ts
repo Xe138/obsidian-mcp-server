@@ -6,6 +6,7 @@ import { generateApiKey } from './utils/auth-utils';
 export class MCPServerSettingTab extends PluginSettingTab {
 	plugin: MCPServerPlugin;
 	private notificationDetailsEl: HTMLDetailsElement | null = null;
+	private activeConfigTab: 'windsurf' | 'claude-code' = 'windsurf';
 
 	constructor(app: App, plugin: MCPServerPlugin) {
 		super(app, plugin);
@@ -67,6 +68,51 @@ export class MCPServerSettingTab extends PluginSettingTab {
 				}));
 	}
 
+	/**
+	 * Generate client-specific MCP configuration
+	 */
+	private generateConfigForClient(client: 'windsurf' | 'claude-code'): {
+		filePath: string;
+		config: object;
+		usageNote: string;
+	} {
+		const port = this.plugin.settings.port;
+		const apiKey = this.plugin.settings.apiKey || 'YOUR_API_KEY_HERE';
+
+		if (client === 'windsurf') {
+			return {
+				filePath: '~/.windsurf/config.json',
+				config: {
+					"mcpServers": {
+						"obsidian": {
+							"serverUrl": `http://127.0.0.1:${port}/mcp`,
+							"headers": {
+								"Authorization": `Bearer ${apiKey}`
+							}
+						}
+					}
+				},
+				usageNote: 'After copying, paste into the config file and restart Windsurf.'
+			};
+		} else { // claude-code
+			return {
+				filePath: '~/.claude.json',
+				config: {
+					"mcpServers": {
+						"obsidian": {
+							"type": "http",
+							"url": `http://127.0.0.1:${port}/mcp`,
+							"headers": {
+								"Authorization": `Bearer ${apiKey}`
+							}
+						}
+					}
+				},
+				usageNote: 'After copying, paste into the config file and restart Claude Code.'
+			};
+		}
+	}
+
 	display(): void {
 		const {containerEl} = this;
 
@@ -74,6 +120,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Clear notification details reference for fresh render
 		this.notificationDetailsEl = null;
+
+		// Reset tab state for fresh render
+		this.activeConfigTab = 'windsurf';
 
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
 
