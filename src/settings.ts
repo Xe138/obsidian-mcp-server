@@ -18,10 +18,46 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
 
+		// Server status
+		containerEl.createEl('h3', {text: 'Server Status'});
+
+		const statusEl = containerEl.createEl('div', {cls: 'mcp-server-status'});
+		const isRunning = this.plugin.mcpServer?.isRunning() ?? false;
+
+		statusEl.createEl('p', {
+			text: isRunning
+				? `✅ Running on port ${this.plugin.settings.port}`
+				: '⭕ Stopped'
+		});
+
+		// Control buttons
+		const buttonContainer = containerEl.createEl('div', {cls: 'mcp-button-container'});
+
+		if (isRunning) {
+			buttonContainer.createEl('button', {text: 'Stop Server'})
+				.addEventListener('click', async () => {
+					await this.plugin.stopServer();
+					this.display();
+				});
+
+			buttonContainer.createEl('button', {text: 'Restart Server'})
+				.addEventListener('click', async () => {
+					await this.plugin.stopServer();
+					await this.plugin.startServer();
+					this.display();
+				});
+		} else {
+			buttonContainer.createEl('button', {text: 'Start Server'})
+				.addEventListener('click', async () => {
+					await this.plugin.startServer();
+					this.display();
+				});
+		}
+
 		// Auto-start setting
 		new Setting(containerEl)
 			.setName('Auto-start server')
-			.setDesc('Automatically start the MCP server when Obsidian launches')
+			.setDesc('Start server when Obsidian launches')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoStart)
 				.onChange(async (value) => {
@@ -32,7 +68,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Port setting
 		new Setting(containerEl)
 			.setName('Port')
-			.setDesc('Port number for the HTTP server (requires restart)')
+			.setDesc('Server port (restart required)')
 			.addText(text => text
 				.setPlaceholder('3000')
 				.setValue(String(this.plugin.settings.port))
@@ -144,58 +180,6 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		configDisplay.style.userSelect = 'text';
 		configDisplay.style.cursor = 'text';
 		configDisplay.textContent = JSON.stringify(mcpConfig, null, 2);
-
-		// Server status
-		containerEl.createEl('h3', {text: 'Server Status'});
-		
-		const statusEl = containerEl.createEl('div', {cls: 'mcp-server-status'});
-		const isRunning = this.plugin.mcpServer?.isRunning() ?? false;
-		
-		statusEl.createEl('p', {
-			text: isRunning 
-				? `✅ Server is running on http://127.0.0.1:${this.plugin.settings.port}/mcp`
-				: '⭕ Server is stopped'
-		});
-
-		// Control buttons
-		const buttonContainer = containerEl.createEl('div', {cls: 'mcp-button-container'});
-		
-		if (isRunning) {
-			buttonContainer.createEl('button', {text: 'Stop Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.stopServer();
-					this.display();
-				});
-			
-			buttonContainer.createEl('button', {text: 'Restart Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.stopServer();
-					await this.plugin.startServer();
-					this.display();
-				});
-		} else {
-			buttonContainer.createEl('button', {text: 'Start Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.startServer();
-					this.display();
-				});
-		}
-
-		// Connection info
-		if (isRunning) {
-			containerEl.createEl('h3', {text: 'Connection Information'});
-			
-			const infoEl = containerEl.createEl('div', {cls: 'mcp-connection-info'});
-			infoEl.createEl('p', {text: 'MCP Endpoint:'});
-			const mcpEndpoint = infoEl.createEl('code', {text: `http://127.0.0.1:${this.plugin.settings.port}/mcp`});
-			mcpEndpoint.style.userSelect = 'all';
-			mcpEndpoint.style.cursor = 'text';
-			
-			infoEl.createEl('p', {text: 'Health Check:'});
-			const healthEndpoint = infoEl.createEl('code', {text: `http://127.0.0.1:${this.plugin.settings.port}/health`});
-			healthEndpoint.style.userSelect = 'all';
-			healthEndpoint.style.cursor = 'text';
-		}
 
 		// Notification Settings
 		containerEl.createEl('h3', {text: 'UI Notifications'});
