@@ -2,7 +2,6 @@ import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { MCPPluginSettings } from './types/settings-types';
 import MCPServerPlugin from './main';
 import { generateApiKey } from './utils/auth-utils';
-import { isEncryptionAvailable } from './utils/encryption-utils';
 
 export class MCPServerSettingTab extends PluginSettingTab {
 	plugin: MCPServerPlugin;
@@ -18,16 +17,6 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
-
-		// Network disclosure
-		const disclosureEl = containerEl.createEl('div', {cls: 'mcp-disclosure'});
-		disclosureEl.createEl('p', {
-			text: '⚠️ This plugin runs a local HTTP server to expose vault operations via the Model Context Protocol (MCP). The server only accepts connections from localhost (127.0.0.1) for security.'
-		});
-		disclosureEl.style.backgroundColor = 'var(--background-secondary)';
-		disclosureEl.style.padding = '12px';
-		disclosureEl.style.marginBottom = '16px';
-		disclosureEl.style.borderRadius = '4px';
 
 		// Auto-start setting
 		new Setting(containerEl)
@@ -60,23 +49,6 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Authentication (Always Enabled)
 		containerEl.createEl('h3', {text: 'Authentication'});
-
-		const authDesc = containerEl.createEl('p', {
-			text: 'Authentication is required for all requests. Your API key is encrypted and stored securely using your system\'s credential storage.'
-		});
-		authDesc.style.fontSize = '0.9em';
-		authDesc.style.color = 'var(--text-muted)';
-		authDesc.style.marginBottom = '16px';
-
-		// Show encryption status
-		const encryptionStatus = containerEl.createEl('p', {
-			text: isEncryptionAvailable()
-				? '🔒 Encryption: Available (using system keychain)'
-				: '⚠️ Encryption: Unavailable (API key stored in plaintext)'
-		});
-		encryptionStatus.style.fontSize = '0.85em';
-		encryptionStatus.style.marginBottom = '12px';
-		encryptionStatus.style.fontStyle = 'italic';
 
 		// API Key Display (always show - auth is always enabled)
 		new Setting(containerEl)
