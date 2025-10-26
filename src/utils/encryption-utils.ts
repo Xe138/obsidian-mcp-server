@@ -8,6 +8,16 @@ try {
 }
 
 /**
+ * Checks if encryption is available on the current platform
+ * @returns true if safeStorage encryption is available
+ */
+export function isEncryptionAvailable(): boolean {
+	return safeStorage !== null &&
+	       typeof safeStorage.isEncryptionAvailable === 'function' &&
+	       safeStorage.isEncryptionAvailable();
+}
+
+/**
  * Encrypts an API key using Electron's safeStorage API
  * Falls back to plaintext if encryption is not available (e.g., Linux without keyring)
  * @param apiKey The plaintext API key to encrypt
@@ -19,7 +29,7 @@ export function encryptApiKey(apiKey: string): string {
 	}
 
 	// Check if safeStorage is available and encryption is enabled
-	if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
+	if (!isEncryptionAvailable()) {
 		console.warn('Encryption not available, storing API key in plaintext');
 		return apiKey;
 	}
@@ -63,14 +73,4 @@ export function decryptApiKey(stored: string): string {
 		console.error('Failed to decrypt API key:', error);
 		throw new Error('Failed to decrypt API key. You may need to regenerate it.');
 	}
-}
-
-/**
- * Checks if encryption is available on the current platform
- * @returns true if safeStorage encryption is available
- */
-export function isEncryptionAvailable(): boolean {
-	return safeStorage !== null &&
-	       typeof safeStorage.isEncryptionAvailable === 'function' &&
-	       safeStorage.isEncryptionAvailable();
 }
