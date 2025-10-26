@@ -110,25 +110,40 @@ jobs:
 
       - name: Create draft release (Gitea)
         if: github.server_url != 'https://github.com'
-        uses: https://gitea.com/actions/gitea-release-action@main
-        with:
-          files: |
-            main.js
-            manifest.json
-            styles.css
-          draft: true
-          title: ${{ github.ref_name }}
-          body: |
-            Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
 
-            ## Changes
+          # Create release via API
+          RELEASE_ID=$(curl -X POST \
+            -H "Accept: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/releases" \
+            -d "$(cat <<EOF
+          {
+            "tag_name": "$TAG_VERSION",
+            "name": "$TAG_VERSION",
+            "body": "Release $TAG_VERSION\n\n## Changes\n\n*Add release notes here before publishing*\n\n## Installation\n\n1. Download main.js, manifest.json, and styles.css\n2. Create a folder in .obsidian/plugins/obsidian-mcp-server/\n3. Copy the three files into the folder\n4. Reload Obsidian\n5. Enable the plugin in Settings → Community Plugins",
+            "draft": true,
+            "prerelease": false
+          }
+          EOF
+          )" | jq -r '.id')
 
-            *Add release notes here before publishing*
+          echo "Created release with ID: $RELEASE_ID"
 
-            ## Installation
+          # Upload release assets
+          for file in main.js manifest.json styles.css; do
+            echo "Uploading $file..."
+            curl -X POST \
+              -H "Accept: application/json" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$file" \
+              "${{ github.server_url }}/api/v1/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$file"
+          done
 
-            1. Download main.js, manifest.json, and styles.css
-            2. Create a folder in .obsidian/plugins/obsidian-mcp-server/
-            3. Copy the three files into the folder
-            4. Reload Obsidian
-            5. Enable the plugin in Settings → Community Plugins
+          echo "✅ Draft release created: $TAG_VERSION"
+          echo "Visit ${{ github.server_url }}/${{ github.repository }}/releases to review and publish"
