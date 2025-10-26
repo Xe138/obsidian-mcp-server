@@ -81,8 +81,10 @@ export class NotificationManager {
 
 		const icon = TOOL_ICONS[toolName] || '🔧';
 		const argsStr = this.formatArgs(args);
-		const message = `${icon} MCP: ${toolName}${argsStr}`;
-		
+		const message = argsStr
+			? `${icon} MCP Tool Called: ${toolName}\n${argsStr}`
+			: `${icon} MCP Tool Called: ${toolName}`;
+
 		this.queueNotification(() => {
 			new Notice(message, duration || this.settings.notificationDuration);
 		});
@@ -144,13 +146,13 @@ export class NotificationManager {
 		}
 
 		if (!args || Object.keys(args).length === 0) {
-			return '()';
+			return '';
 		}
 
 		try {
 			// Extract key parameters for display
 			const keyParams: string[] = [];
-			
+
 			if (args.path) {
 				keyParams.push(`path: "${this.truncateString(args.path, 30)}"`);
 			}
@@ -163,16 +165,16 @@ export class NotificationManager {
 			if (args.recursive !== undefined) {
 				keyParams.push(`recursive: ${args.recursive}`);
 			}
-			
+
 			// If no key params, show first 50 chars of JSON
 			if (keyParams.length === 0) {
 				const json = JSON.stringify(args);
-				return `(${this.truncateString(json, 50)})`;
+				return this.truncateString(json, 50);
 			}
-			
-			return `({ ${keyParams.join(', ')} })`;
+
+			return keyParams.join(', ');
 		} catch (e) {
-			return '(...)';
+			return '';
 		}
 	}
 
