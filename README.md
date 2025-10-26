@@ -308,6 +308,8 @@ When reporting bugs, please include:
 
 If you find this plugin helpful, consider supporting its development:
 
+**GitHub Sponsors:** https://github.com/sponsors/Xe138
+
 **Buy Me a Coffee:** https://buymeacoffee.com/xe138
 
 ## License
