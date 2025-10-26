@@ -4,6 +4,6 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Exposes Obsidian vault operations via Model Context Protocol (MCP) over HTTP",
-	"author": "Bill Ballou",
+	"author": "William Ballou",
 	"isDesktopOnly": true
 }
