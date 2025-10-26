@@ -234,6 +234,34 @@ This plugin is **desktop-only** (`isDesktopOnly: true`) because it uses Node.js 
 - Create GitHub releases with tags that **exactly match** `manifest.json` version (no `v` prefix)
 - Attach required assets to releases: `manifest.json`, `main.js`, `styles.css`
 
+#### GitHub Release Workflow
+
+A GitHub Actions workflow automatically handles releases:
+
+**Location**: `.github/workflows/release.yml`
+
+**Trigger**: Push of semantic version tags (e.g., `1.2.3`)
+
+**Process**:
+1. Validates version consistency across `package.json`, `manifest.json`, and git tag
+2. Runs full test suite (blocks release if tests fail)
+3. Builds plugin with production config
+4. Creates draft GitHub release with `main.js`, `manifest.json`, and `styles.css`
+
+**Developer workflow**:
+```bash
+npm version patch  # or minor/major - updates manifest.json via version-bump.mjs
+git commit -m "chore: bump version to X.Y.Z"
+git tag X.Y.Z
+git push && git push --tags  # Triggers workflow
+```
+
+After workflow completes:
+1. Go to GitHub Releases
+2. Review draft release and attached files
+3. Write release notes
+4. Publish release
+
 ### Build Artifacts
 
 - **Never commit build artifacts** to version control (`main.js`, `node_modules/`, etc.)
