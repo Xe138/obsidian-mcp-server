@@ -6,7 +6,9 @@ import { generateApiKey } from './utils/auth-utils';
 export class MCPServerSettingTab extends PluginSettingTab {
 	plugin: MCPServerPlugin;
 	private notificationDetailsEl: HTMLDetailsElement | null = null;
+	private notificationToggleEl: HTMLElement | null = null;
 	private authDetailsEl: HTMLDetailsElement | null = null;
+	private configContainerEl: HTMLElement | null = null;
 	private activeConfigTab: 'windsurf' | 'claude-code' = 'windsurf';
 
 	constructor(app: App, plugin: MCPServerPlugin) {
@@ -121,7 +123,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Clear references for fresh render
 		this.notificationDetailsEl = null;
+		this.notificationToggleEl = null;
 		this.authDetailsEl = null;
+		this.configContainerEl = null;
 
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
 
@@ -259,6 +263,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		const configContainer = authDetails.createDiv({cls: 'mcp-config-snippet'});
 		configContainer.style.marginBottom = '20px';
 
+		// Store reference for targeted updates
+		this.configContainerEl = configContainer;
+
 		// Tab buttons for switching between clients
 		const tabContainer = configContainer.createDiv({cls: 'mcp-config-tabs'});
 		tabContainer.style.display = 'flex';
@@ -358,8 +365,11 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Store reference for targeted updates
 		this.notificationDetailsEl = notifDetails;
 
-		// Enable notifications
-		new Setting(notifDetails)
+		// Enable notifications - create container for the toggle setting
+		const notificationToggleContainer = notifDetails.createDiv({cls: 'mcp-notification-toggle'});
+		this.notificationToggleEl = notificationToggleContainer;
+
+		new Setting(notificationToggleContainer)
 			.setName('Enable notifications')
 			.setDesc('Show when MCP tools are called')
 			.addToggle(toggle => toggle
@@ -381,7 +391,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 	 * Update only the notification section without re-rendering entire page
 	 */
 	private updateNotificationSection(): void {
-		if (!this.notificationDetailsEl) {
+		if (!this.notificationDetailsEl || !this.notificationToggleEl) {
 			// Fallback to full re-render if reference lost
 			this.display();
 			return;
@@ -390,17 +400,16 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Store current open state
 		const wasOpen = this.notificationDetailsEl.open;
 
-		// Find and remove all child elements except the summary
+		// Remove all children except the summary and the toggle container
 		const summary = this.notificationDetailsEl.querySelector('summary');
-		// Remove children that come after the summary
 		const children = Array.from(this.notificationDetailsEl.children);
 		for (const child of children) {
-			if (child !== summary) {
+			if (child !== summary && child !== this.notificationToggleEl) {
 				this.notificationDetailsEl.removeChild(child);
 			}
 		}
 
-		// Rebuild notification settings
+		// Rebuild notification settings only if enabled
 		if (this.plugin.settings.notificationsEnabled) {
 			this.renderNotificationSettings(this.notificationDetailsEl);
 		}
@@ -413,28 +422,20 @@ export class MCPServerSettingTab extends PluginSettingTab {
 	 * Update only the config section without re-rendering entire page
 	 */
 	private updateConfigSection(): void {
-		if (!this.authDetailsEl) {
+		if (!this.configContainerEl) {
 			// Fallback to full re-render if reference lost
 			this.display();
 			return;
 		}
 
-		// Store current open state
-		const wasOpen = this.authDetailsEl.open;
-
-		// Find the config container element (it's under the authDetails)
-		const configContainer = this.authDetailsEl.querySelector('.mcp-config-snippet');
-		if (!configContainer) {
-			// If we can't find it, just do a full re-render
-			this.display();
-			return;
-		}
+		// Store current open state of the auth details
+		const wasOpen = this.authDetailsEl?.open ?? false;
 
 		// Clear the config container
-		configContainer.empty();
+		this.configContainerEl.empty();
 
 		// Tab buttons for switching between clients
-		const tabContainer = configContainer.createDiv({cls: 'mcp-config-tabs'});
+		const tabContainer = this.configContainerEl.createDiv({cls: 'mcp-config-tabs'});
 		tabContainer.style.display = 'flex';
 		tabContainer.style.gap = '8px';
 		tabContainer.style.marginBottom = '16px';
@@ -474,7 +475,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		const {filePath, config, usageNote} = this.generateConfigForClient(this.activeConfigTab);
 
 		// Tab content area
-		const tabContent = configContainer.createDiv({cls: 'mcp-config-content'});
+		const tabContent = this.configContainerEl.createDiv({cls: 'mcp-config-content'});
 		tabContent.style.marginTop = '16px';
 
 		// File location label
@@ -519,7 +520,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		usageNoteDisplay.style.color = 'var(--text-muted)';
 		usageNoteDisplay.style.fontStyle = 'italic';
 
-		// Restore open state
-		this.authDetailsEl.open = wasOpen;
+		// Restore open state (only if authDetailsEl is available)
+		if (this.authDetailsEl) {
+			this.authDetailsEl.open = wasOpen;
+		}
 	}
 }
