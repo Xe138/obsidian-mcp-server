@@ -196,19 +196,19 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		configDisplay.textContent = JSON.stringify(mcpConfig, null, 2);
 
 		// Notification Settings
-		containerEl.createEl('h3', {text: 'UI Notifications'});
-		
-		const notifDesc = containerEl.createEl('p', {
-			text: 'Display notifications in Obsidian UI when MCP tools are called. Useful for monitoring API activity and debugging.'
-		});
-		notifDesc.style.fontSize = '0.9em';
-		notifDesc.style.color = 'var(--text-muted)';
-		notifDesc.style.marginBottom = '12px';
+		const notifDetails = containerEl.createEl('details');
+		notifDetails.style.marginBottom = '20px';
+		const notifSummary = notifDetails.createEl('summary');
+		notifSummary.style.fontSize = '1.17em';
+		notifSummary.style.fontWeight = 'bold';
+		notifSummary.style.marginBottom = '12px';
+		notifSummary.style.cursor = 'pointer';
+		notifSummary.setText('UI Notifications');
 
 		// Enable notifications
-		new Setting(containerEl)
+		new Setting(notifDetails)
 			.setName('Enable notifications')
-			.setDesc('Show notifications when MCP tools are called (request only, no completion notifications)')
+			.setDesc('Show when MCP tools are called')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.notificationsEnabled)
 				.onChange(async (value) => {
@@ -221,7 +221,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Show notification settings only if enabled
 		if (this.plugin.settings.notificationsEnabled) {
 			// Show parameters
-			new Setting(containerEl)
+			new Setting(notifDetails)
 				.setName('Show parameters')
 				.setDesc('Include tool parameters in notifications')
 				.addToggle(toggle => toggle
@@ -233,9 +233,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					}));
 
 			// Notification duration
-			new Setting(containerEl)
+			new Setting(notifDetails)
 				.setName('Notification duration')
-				.setDesc('How long notifications stay visible (milliseconds)')
+				.setDesc('Duration in milliseconds')
 				.addText(text => text
 					.setPlaceholder('3000')
 					.setValue(String(this.plugin.settings.notificationDuration))
@@ -249,9 +249,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					}));
 
 			// Log to console
-			new Setting(containerEl)
+			new Setting(notifDetails)
 				.setName('Log to console')
-				.setDesc('Also log tool calls to browser console')
+				.setDesc('Log tool calls to console')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.logToConsole)
 					.onChange(async (value) => {
@@ -261,7 +261,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					}));
 
 			// View history button
-			new Setting(containerEl)
+			new Setting(notifDetails)
 				.setName('Notification history')
 				.setDesc('View recent MCP tool calls')
 				.addButton(button => button
