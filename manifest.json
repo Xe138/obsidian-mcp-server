@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-mcp-server",
 	"name": "MCP Server",
-	"version": "1.0.0-alpha.2",
+	"version": "1.0.0-alpha.3",
 	"minAppVersion": "0.15.0",
 	"description": "Exposes Obsidian vault operations via Model Context Protocol (MCP) over HTTP.",
 	"author": "William Ballou",
