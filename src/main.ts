@@ -91,6 +91,10 @@ export default class MCPServerPlugin extends Plugin {
 
 		try {
 			this.mcpServer = new MCPServer(this.app, this.settings);
+			// Set notification manager if notifications are enabled
+			if (this.notificationManager) {
+				this.mcpServer.setNotificationManager(this.notificationManager);
+			}
 			await this.mcpServer.start();
 			new Notice(`MCP Server started on port ${this.settings.port}`);
 			this.updateStatusBar();
