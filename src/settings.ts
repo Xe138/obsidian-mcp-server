@@ -121,9 +121,6 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Clear notification details reference for fresh render
 		this.notificationDetailsEl = null;
 
-		// Reset tab state for fresh render
-		this.activeConfigTab = 'windsurf';
-
 		containerEl.createEl('h2', {text: 'MCP Server Settings'});
 
 		// Server status
@@ -256,13 +253,43 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		const configContainer = authDetails.createDiv({cls: 'mcp-config-snippet'});
 		configContainer.style.marginBottom = '20px';
-		
-		const configDesc = configContainer.createEl('p', {
-			text: 'Add to your MCP client config:'
+
+		// Tab buttons for switching between clients
+		const tabContainer = configContainer.createDiv({cls: 'mcp-config-tabs'});
+		tabContainer.style.display = 'flex';
+		tabContainer.style.gap = '8px';
+		tabContainer.style.marginBottom = '16px';
+		tabContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
+
+		// Windsurf tab button
+		const windsurfTab = tabContainer.createEl('button', {text: 'Windsurf'});
+		windsurfTab.style.padding = '8px 16px';
+		windsurfTab.style.border = 'none';
+		windsurfTab.style.background = 'none';
+		windsurfTab.style.cursor = 'pointer';
+		windsurfTab.style.borderBottom = this.activeConfigTab === 'windsurf'
+			? '2px solid var(--interactive-accent)'
+			: '2px solid transparent';
+		windsurfTab.style.fontWeight = this.activeConfigTab === 'windsurf' ? 'bold' : 'normal';
+		windsurfTab.addEventListener('click', () => {
+			this.activeConfigTab = 'windsurf';
+			this.display();
 		});
-		configDesc.style.marginBottom = '8px';
-		configDesc.style.fontSize = '0.9em';
-		configDesc.style.color = 'var(--text-muted)';
+
+		// Claude Code tab button
+		const claudeCodeTab = tabContainer.createEl('button', {text: 'Claude Code'});
+		claudeCodeTab.style.padding = '8px 16px';
+		claudeCodeTab.style.border = 'none';
+		claudeCodeTab.style.background = 'none';
+		claudeCodeTab.style.cursor = 'pointer';
+		claudeCodeTab.style.borderBottom = this.activeConfigTab === 'claude-code'
+			? '2px solid var(--interactive-accent)'
+			: '2px solid transparent';
+		claudeCodeTab.style.fontWeight = this.activeConfigTab === 'claude-code' ? 'bold' : 'normal';
+		claudeCodeTab.addEventListener('click', () => {
+			this.activeConfigTab = 'claude-code';
+			this.display();
+		});
 
 		// Generate JSON config (auth always included)
 		const mcpConfig = {
