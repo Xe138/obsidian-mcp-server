@@ -61,70 +61,94 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Authentication (Always Enabled)
 		containerEl.createEl('h3', {text: 'Authentication'});
 
-		const authDesc = containerEl.createEl('p', {
-			text: 'Authentication is required for all requests. Your API key is encrypted and stored securely using your system\'s credential storage.'
-		});
-		authDesc.style.fontSize = '0.9em';
-		authDesc.style.color = 'var(--text-muted)';
-		authDesc.style.marginBottom = '16px';
+		try {
+			const authDesc = containerEl.createEl('p', {
+				text: 'Authentication is required for all requests. Your API key is encrypted and stored securely using your system\'s credential storage.'
+			});
+			authDesc.style.fontSize = '0.9em';
+			authDesc.style.color = 'var(--text-muted)';
+			authDesc.style.marginBottom = '16px';
 
-		// Show encryption status
-		const encryptionStatus = containerEl.createEl('p', {
-			text: isEncryptionAvailable()
-				? '🔒 Encryption: Available (using system keychain)'
-				: '⚠️ Encryption: Unavailable (API key stored in plaintext)'
-		});
-		encryptionStatus.style.fontSize = '0.85em';
-		encryptionStatus.style.marginBottom = '12px';
-		encryptionStatus.style.fontStyle = 'italic';
+			// Show encryption status
+			const encryptionAvailable = isEncryptionAvailable();
+			console.log('[Settings] Encryption available:', encryptionAvailable);
+
+			const encryptionStatus = containerEl.createEl('p', {
+				text: encryptionAvailable
+					? '🔒 Encryption: Available (using system keychain)'
+					: '⚠️ Encryption: Unavailable (API key stored in plaintext)'
+			});
+			encryptionStatus.style.fontSize = '0.85em';
+			encryptionStatus.style.marginBottom = '12px';
+			encryptionStatus.style.fontStyle = 'italic';
+		} catch (error) {
+			console.error('[Settings] Error in auth description section:', error);
+			containerEl.createEl('p', {
+				text: '⚠️ Error displaying authentication section: ' + (error instanceof Error ? error.message : String(error)),
+				cls: 'mod-error'
+			});
+		}
 
 		// API Key Display (always show - auth is always enabled)
-		new Setting(containerEl)
-			.setName('API Key Management')
-			.setDesc('Use this key in the Authorization header as Bearer token');
+		console.log('[Settings] About to render API key section');
+		console.log('[Settings] API key length:', (this.plugin.settings.apiKey || '').length);
 
-		// Create a full-width container for buttons and key display
-		const apiKeyContainer = containerEl.createDiv({cls: 'mcp-api-key-section'});
-		apiKeyContainer.style.marginBottom = '20px';
-		apiKeyContainer.style.marginLeft = '0';
+		try {
+			new Setting(containerEl)
+				.setName('API Key Management')
+				.setDesc('Use this key in the Authorization header as Bearer token');
 
-		// Create button container
-		const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-buttons'});
-		apiKeyButtonContainer.style.display = 'flex';
-		apiKeyButtonContainer.style.gap = '8px';
-		apiKeyButtonContainer.style.marginBottom = '12px';
+			// Create a full-width container for buttons and key display
+			const apiKeyContainer = containerEl.createDiv({cls: 'mcp-api-key-section'});
+			apiKeyContainer.style.marginBottom = '20px';
+			apiKeyContainer.style.marginLeft = '0';
 
-		// Copy button
-		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
-		copyButton.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
-			new Notice('✅ API key copied to clipboard');
-		});
+			// Create button container
+			const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-buttons'});
+			apiKeyButtonContainer.style.display = 'flex';
+			apiKeyButtonContainer.style.gap = '8px';
+			apiKeyButtonContainer.style.marginBottom = '12px';
 
-		// Regenerate button
-		const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate Key'});
-		regenButton.addEventListener('click', async () => {
-			this.plugin.settings.apiKey = generateApiKey();
-			await this.plugin.saveSettings();
-			new Notice('✅ New API key generated');
-			if (this.plugin.mcpServer?.isRunning()) {
-				new Notice('⚠️ Server restart required for API key changes to take effect');
-			}
-			this.display();
-		});
+			// Copy button
+			const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
+			copyButton.addEventListener('click', async () => {
+				await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
+				new Notice('✅ API key copied to clipboard');
+			});
 
-		// API Key display (static, copyable text)
-		const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-display'});
-		keyDisplayContainer.style.padding = '12px';
-		keyDisplayContainer.style.backgroundColor = 'var(--background-secondary)';
-		keyDisplayContainer.style.borderRadius = '4px';
-		keyDisplayContainer.style.fontFamily = 'monospace';
-		keyDisplayContainer.style.fontSize = '0.9em';
-		keyDisplayContainer.style.wordBreak = 'break-all';
-		keyDisplayContainer.style.userSelect = 'all';
-		keyDisplayContainer.style.cursor = 'text';
-		keyDisplayContainer.style.marginBottom = '16px';
-		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
+			// Regenerate button
+			const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate Key'});
+			regenButton.addEventListener('click', async () => {
+				this.plugin.settings.apiKey = generateApiKey();
+				await this.plugin.saveSettings();
+				new Notice('✅ New API key generated');
+				if (this.plugin.mcpServer?.isRunning()) {
+					new Notice('⚠️ Server restart required for API key changes to take effect');
+				}
+				this.display();
+			});
+
+			// API Key display (static, copyable text)
+			const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-display'});
+			keyDisplayContainer.style.padding = '12px';
+			keyDisplayContainer.style.backgroundColor = 'var(--background-secondary)';
+			keyDisplayContainer.style.borderRadius = '4px';
+			keyDisplayContainer.style.fontFamily = 'monospace';
+			keyDisplayContainer.style.fontSize = '0.9em';
+			keyDisplayContainer.style.wordBreak = 'break-all';
+			keyDisplayContainer.style.userSelect = 'all';
+			keyDisplayContainer.style.cursor = 'text';
+			keyDisplayContainer.style.marginBottom = '16px';
+			keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
+
+			console.log('[Settings] API key section rendered successfully');
+		} catch (error) {
+			console.error('[Settings] Error rendering API key section:', error);
+			containerEl.createEl('p', {
+				text: '⚠️ Error displaying API key: ' + (error instanceof Error ? error.message : String(error)),
+				cls: 'mod-error'
+			});
+		}
 
 		// MCP Client Configuration (show always, regardless of auth)
 		containerEl.createEl('h3', {text: 'MCP Client Configuration'});
