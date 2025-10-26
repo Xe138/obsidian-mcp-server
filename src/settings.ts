@@ -142,13 +142,20 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
 
 		// MCP Client Configuration (show always, regardless of auth)
-		containerEl.createEl('h3', {text: 'MCP Client Configuration'});
-		
-		const configContainer = containerEl.createDiv({cls: 'mcp-config-snippet'});
+		const configDetails = authDetails.createEl('details');
+		configDetails.style.marginTop = '16px';
+		const configSummary = configDetails.createEl('summary');
+		configSummary.style.fontSize = '1em';
+		configSummary.style.fontWeight = 'bold';
+		configSummary.style.marginBottom = '8px';
+		configSummary.style.cursor = 'pointer';
+		configSummary.setText('MCP Client Configuration');
+
+		const configContainer = configDetails.createDiv({cls: 'mcp-config-snippet'});
 		configContainer.style.marginBottom = '20px';
 		
 		const configDesc = configContainer.createEl('p', {
-			text: 'Add this configuration to your MCP client (e.g., Claude Desktop, Cline):'
+			text: 'Add to your MCP client config:'
 		});
 		configDesc.style.marginBottom = '8px';
 		configDesc.style.fontSize = '0.9em';
