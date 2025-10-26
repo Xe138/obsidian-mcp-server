@@ -1,4 +1,4 @@
-import { App, Modal } from 'obsidian';
+import { App, Modal, Setting } from 'obsidian';
 import { NotificationHistoryEntry } from './notifications';
 
 /**
@@ -9,6 +9,10 @@ export class NotificationHistoryModal extends Modal {
 	private filteredHistory: NotificationHistoryEntry[];
 	private filterTool: string = '';
 	private filterType: 'all' | 'success' | 'error' = 'all';
+
+	// DOM element references for targeted updates
+	private listContainerEl: HTMLElement | null = null;
+	private countEl: HTMLElement | null = null;
 
 	constructor(app: App, history: NotificationHistoryEntry[]) {
 		super(app);
@@ -24,11 +28,11 @@ export class NotificationHistoryModal extends Modal {
 		// Title
 		contentEl.createEl('h2', { text: 'MCP Notification History' });
 
-		// Filters
+		// Filters (create once, never recreate)
 		this.createFilters(contentEl);
 
-		// History list
-		this.createHistoryList(contentEl);
+		// History list (will be updated via reference)
+		this.createHistoryListContainer(contentEl);
 
 		// Actions
 		this.createActions(contentEl);
@@ -37,68 +41,77 @@ export class NotificationHistoryModal extends Modal {
 	onClose() {
 		const { contentEl } = this;
 		contentEl.empty();
+		this.listContainerEl = null;
+		this.countEl = null;
 	}
 
 	/**
-	 * Create filter controls
+	 * Create filter controls using Obsidian Setting components
 	 */
 	private createFilters(containerEl: HTMLElement): void {
 		const filterContainer = containerEl.createDiv({ cls: 'mcp-history-filters' });
 		filterContainer.style.marginBottom = '16px';
-		filterContainer.style.display = 'flex';
-		filterContainer.style.gap = '12px';
-		filterContainer.style.flexWrap = 'wrap';
 
-		// Tool name filter
-		const toolFilterContainer = filterContainer.createDiv();
-		toolFilterContainer.createEl('label', { text: 'Tool: ' });
-		const toolInput = toolFilterContainer.createEl('input', {
-			type: 'text',
-			placeholder: 'Filter by tool name...'
-		});
-		toolInput.style.marginLeft = '4px';
-		toolInput.style.padding = '4px 8px';
-		toolInput.addEventListener('input', (e) => {
-			this.filterTool = (e.target as HTMLInputElement).value.toLowerCase();
-			this.applyFilters();
-		});
+		// Tool name filter using Setting component
+		new Setting(filterContainer)
+			.setName('Tool filter')
+			.setDesc('Filter by tool name')
+			.addText(text => text
+				.setPlaceholder('Enter tool name...')
+				.setValue(this.filterTool)
+				.onChange((value) => {
+					this.filterTool = value.toLowerCase();
+					this.applyFilters();
+				}));
 
-		// Type filter
-		const typeFilterContainer = filterContainer.createDiv();
-		typeFilterContainer.createEl('label', { text: 'Type: ' });
-		const typeSelect = typeFilterContainer.createEl('select');
-		typeSelect.style.marginLeft = '4px';
-		typeSelect.style.padding = '4px 8px';
-		
-		const allOption = typeSelect.createEl('option', { text: 'All', value: 'all' });
-		const successOption = typeSelect.createEl('option', { text: 'Success', value: 'success' });
-		const errorOption = typeSelect.createEl('option', { text: 'Error', value: 'error' });
-		
-		typeSelect.addEventListener('change', (e) => {
-			this.filterType = (e.target as HTMLSelectElement).value as 'all' | 'success' | 'error';
-			this.applyFilters();
-		});
+		// Type filter using Setting component
+		new Setting(filterContainer)
+			.setName('Status filter')
+			.setDesc('Filter by success or error')
+			.addDropdown(dropdown => dropdown
+				.addOption('all', 'All')
+				.addOption('success', 'Success')
+				.addOption('error', 'Error')
+				.setValue(this.filterType)
+				.onChange((value) => {
+					this.filterType = value as 'all' | 'success' | 'error';
+					this.applyFilters();
+				}));
 
 		// Results count
-		const countEl = filterContainer.createDiv({ cls: 'mcp-history-count' });
-		countEl.style.marginLeft = 'auto';
-		countEl.style.alignSelf = 'center';
-		countEl.textContent = `${this.filteredHistory.length} entries`;
+		this.countEl = filterContainer.createDiv({ cls: 'mcp-history-count' });
+		this.countEl.style.marginTop = '8px';
+		this.countEl.style.fontSize = '0.9em';
+		this.countEl.style.color = 'var(--text-muted)';
+		this.updateResultsCount();
 	}
 
 	/**
-	 * Create history list
+	 * Create history list container (called once)
 	 */
-	private createHistoryList(containerEl: HTMLElement): void {
-		const listContainer = containerEl.createDiv({ cls: 'mcp-history-list' });
-		listContainer.style.maxHeight = '400px';
-		listContainer.style.overflowY = 'auto';
-		listContainer.style.marginBottom = '16px';
-		listContainer.style.border = '1px solid var(--background-modifier-border)';
-		listContainer.style.borderRadius = '4px';
+	private createHistoryListContainer(containerEl: HTMLElement): void {
+		this.listContainerEl = containerEl.createDiv({ cls: 'mcp-history-list' });
+		this.listContainerEl.style.maxHeight = '400px';
+		this.listContainerEl.style.overflowY = 'auto';
+		this.listContainerEl.style.marginBottom = '16px';
+		this.listContainerEl.style.border = '1px solid var(--background-modifier-border)';
+		this.listContainerEl.style.borderRadius = '4px';
+
+		// Initial render
+		this.updateHistoryList();
+	}
+
+	/**
+	 * Update history list contents (called on filter changes)
+	 */
+	private updateHistoryList(): void {
+		if (!this.listContainerEl) return;
+
+		// Clear existing content
+		this.listContainerEl.empty();
 
 		if (this.filteredHistory.length === 0) {
-			const emptyEl = listContainer.createDiv({ cls: 'mcp-history-empty' });
+			const emptyEl = this.listContainerEl.createDiv({ cls: 'mcp-history-empty' });
 			emptyEl.style.padding = '24px';
 			emptyEl.style.textAlign = 'center';
 			emptyEl.style.color = 'var(--text-muted)';
@@ -107,10 +120,10 @@ export class NotificationHistoryModal extends Modal {
 		}
 
 		this.filteredHistory.forEach((entry, index) => {
-			const entryEl = listContainer.createDiv({ cls: 'mcp-history-entry' });
+			const entryEl = this.listContainerEl!.createDiv({ cls: 'mcp-history-entry' });
 			entryEl.style.padding = '12px';
-			entryEl.style.borderBottom = index < this.filteredHistory.length - 1 
-				? '1px solid var(--background-modifier-border)' 
+			entryEl.style.borderBottom = index < this.filteredHistory.length - 1
+				? '1px solid var(--background-modifier-border)'
 				: 'none';
 
 			// Header row
@@ -158,6 +171,14 @@ export class NotificationHistoryModal extends Modal {
 				errorEl.textContent = entry.error;
 			}
 		});
+	}
+
+	/**
+	 * Update results count display
+	 */
+	private updateResultsCount(): void {
+		if (!this.countEl) return;
+		this.countEl.textContent = `${this.filteredHistory.length} of ${this.history.length} entries`;
 	}
 
 	/**
@@ -209,7 +230,8 @@ export class NotificationHistoryModal extends Modal {
 			return true;
 		});
 
-		// Re-render
-		this.onOpen();
+		// Update only the affected UI elements
+		this.updateHistoryList();
+		this.updateResultsCount();
 	}
 }
