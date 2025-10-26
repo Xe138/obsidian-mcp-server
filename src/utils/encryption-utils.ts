@@ -70,5 +70,7 @@ export function decryptApiKey(stored: string): string {
  * @returns true if safeStorage encryption is available
  */
 export function isEncryptionAvailable(): boolean {
-	return safeStorage !== null && safeStorage.isEncryptionAvailable();
+	return safeStorage !== null &&
+	       typeof safeStorage.isEncryptionAvailable === 'function' &&
+	       safeStorage.isEncryptionAvailable();
 }
