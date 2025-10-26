@@ -2,6 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import { MCPPluginSettings } from './types/settings-types';
 import MCPServerPlugin from './main';
 import { generateApiKey } from './utils/auth-utils';
+import { isEncryptionAvailable } from './utils/encryption-utils';
 
 export class MCPServerSettingTab extends PluginSettingTab {
 	plugin: MCPServerPlugin;
@@ -57,79 +58,73 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		// Authentication
+		// Authentication (Always Enabled)
+		containerEl.createEl('h3', {text: 'Authentication'});
+
+		const authDesc = containerEl.createEl('p', {
+			text: 'Authentication is required for all requests. Your API key is encrypted and stored securely using your system\'s credential storage.'
+		});
+		authDesc.style.fontSize = '0.9em';
+		authDesc.style.color = 'var(--text-muted)';
+		authDesc.style.marginBottom = '16px';
+
+		// Show encryption status
+		const encryptionStatus = containerEl.createEl('p', {
+			text: isEncryptionAvailable()
+				? '🔒 Encryption: Available (using system keychain)'
+				: '⚠️ Encryption: Unavailable (API key stored in plaintext)'
+		});
+		encryptionStatus.style.fontSize = '0.85em';
+		encryptionStatus.style.marginBottom = '12px';
+		encryptionStatus.style.fontStyle = 'italic';
+
+		// API Key Display (always show - auth is always enabled)
 		new Setting(containerEl)
-			.setName('Enable authentication')
-			.setDesc('Require API key for requests (requires restart)')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableAuth)
-				.onChange(async (value) => {
-					this.plugin.settings.enableAuth = value;
-					
-					// Auto-generate API key when enabling authentication
-					if (value && (!this.plugin.settings.apiKey || this.plugin.settings.apiKey.trim() === '')) {
-						this.plugin.settings.apiKey = generateApiKey();
-						new Notice('✅ API key generated automatically');
-					}
-					
-					await this.plugin.saveSettings();
-					if (this.plugin.mcpServer?.isRunning()) {
-						new Notice('⚠️ Server restart required for authentication changes to take effect');
-					}
-					
-					// Refresh the display to show the new key
-					this.display();
-				}));
+			.setName('API Key Management')
+			.setDesc('Use this key in the Authorization header as Bearer token');
 
-		// API Key Display (only show if authentication is enabled)
-		if (this.plugin.settings.enableAuth) {
-			new Setting(containerEl)
-				.setName('API Key Management')
-				.setDesc('Use this key in the Authorization header as Bearer token');
+		// Create a full-width container for buttons and key display
+		const apiKeyContainer = containerEl.createDiv({cls: 'mcp-api-key-section'});
+		apiKeyContainer.style.marginBottom = '20px';
+		apiKeyContainer.style.marginLeft = '0';
 
-			// Create a full-width container for buttons and key display
-			const apiKeyContainer = containerEl.createDiv({cls: 'mcp-api-key-section'});
-			apiKeyContainer.style.marginBottom = '20px';
-			apiKeyContainer.style.marginLeft = '0';
+		// Create button container
+		const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-buttons'});
+		apiKeyButtonContainer.style.display = 'flex';
+		apiKeyButtonContainer.style.gap = '8px';
+		apiKeyButtonContainer.style.marginBottom = '12px';
 
-			// Create button container
-			const buttonContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-buttons'});
-			buttonContainer.style.display = 'flex';
-			buttonContainer.style.gap = '8px';
-			buttonContainer.style.marginBottom = '12px';
+		// Copy button
+		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
+		copyButton.addEventListener('click', async () => {
+			await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
+			new Notice('✅ API key copied to clipboard');
+		});
 
-			// Copy button
-			const copyButton = buttonContainer.createEl('button', {text: '📋 Copy Key'});
-			copyButton.addEventListener('click', async () => {
-				await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
-				new Notice('✅ API key copied to clipboard');
-			});
+		// Regenerate button
+		const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate Key'});
+		regenButton.addEventListener('click', async () => {
+			this.plugin.settings.apiKey = generateApiKey();
+			await this.plugin.saveSettings();
+			new Notice('✅ New API key generated');
+			if (this.plugin.mcpServer?.isRunning()) {
+				new Notice('⚠️ Server restart required for API key changes to take effect');
+			}
+			this.display();
+		});
 
-			// Regenerate button
-			const regenButton = buttonContainer.createEl('button', {text: '🔄 Regenerate Key'});
-			regenButton.addEventListener('click', async () => {
-				this.plugin.settings.apiKey = generateApiKey();
-				await this.plugin.saveSettings();
-				new Notice('✅ New API key generated');
-				if (this.plugin.mcpServer?.isRunning()) {
-					new Notice('⚠️ Server restart required for API key changes to take effect');
-				}
-				this.display();
-			});
-
-			// API Key display (static, copyable text)
-			const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-display'});
-			keyDisplayContainer.style.padding = '12px';
-			keyDisplayContainer.style.backgroundColor = 'var(--background-secondary)';
-			keyDisplayContainer.style.borderRadius = '4px';
-			keyDisplayContainer.style.fontFamily = 'monospace';
-			keyDisplayContainer.style.fontSize = '0.9em';
-			keyDisplayContainer.style.wordBreak = 'break-all';
-			keyDisplayContainer.style.userSelect = 'all';
-			keyDisplayContainer.style.cursor = 'text';
-			keyDisplayContainer.style.marginBottom = '16px';
-			keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
-		}
+		// API Key display (static, copyable text)
+		const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-display'});
+		keyDisplayContainer.style.padding = '12px';
+		keyDisplayContainer.style.backgroundColor = 'var(--background-secondary)';
+		keyDisplayContainer.style.borderRadius = '4px';
+		keyDisplayContainer.style.fontFamily = 'monospace';
+		keyDisplayContainer.style.fontSize = '0.9em';
+		keyDisplayContainer.style.wordBreak = 'break-all';
+		keyDisplayContainer.style.userSelect = 'all';
+		keyDisplayContainer.style.cursor = 'text';
+		keyDisplayContainer.style.marginBottom = '16px';
+		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
 
 		// MCP Client Configuration (show always, regardless of auth)
 		containerEl.createEl('h3', {text: 'MCP Client Configuration'});
@@ -144,21 +139,17 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		configDesc.style.fontSize = '0.9em';
 		configDesc.style.color = 'var(--text-muted)';
 
-		// Generate JSON config based on auth settings
-		const mcpConfig: any = {
+		// Generate JSON config (auth always included)
+		const mcpConfig = {
 			"mcpServers": {
 				"obsidian-mcp": {
-					"serverUrl": `http://127.0.0.1:${this.plugin.settings.port}/mcp`
+					"serverUrl": `http://127.0.0.1:${this.plugin.settings.port}/mcp`,
+					"headers": {
+						"Authorization": `Bearer ${this.plugin.settings.apiKey || 'YOUR_API_KEY_HERE'}`
+					}
 				}
 			}
 		};
-
-		// Only add headers if authentication is enabled
-		if (this.plugin.settings.enableAuth && this.plugin.settings.apiKey) {
-			mcpConfig.mcpServers["obsidian-mcp"].headers = {
-				"Authorization": `Bearer ${this.plugin.settings.apiKey}`
-			};
-		}
 
 		// Config display with copy button
 		const configButtonContainer = configContainer.createDiv();
