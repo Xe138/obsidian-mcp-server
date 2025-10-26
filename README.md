@@ -12,13 +12,32 @@ An Obsidian plugin that exposes your vault operations via the [Model Context Pro
 
 ## Available MCP Tools
 
-- `read_note` - Read the content of a note
-- `create_note` - Create a new note
-- `update_note` - Update an existing note
-- `delete_note` - Delete a note
-- `search_notes` - Search for notes by query
-- `list_notes` - List all notes or notes in a folder
-- `get_vault_info` - Get vault metadata
+### Note Operations
+- `read_note` - Read the content of a note with optional frontmatter parsing
+- `create_note` - Create a new note with conflict handling strategies
+- `update_note` - Update an existing note (full content replacement)
+- `delete_note` - Delete a note (soft delete to .trash or permanent)
+- `update_frontmatter` - Update frontmatter fields without modifying note content
+- `update_sections` - Update specific sections of a note by line range
+- `rename_file` - Rename or move a file with automatic wikilink updates
+- `read_excalidraw` - Read Excalidraw drawing files with metadata extraction (currently limited to uncompressed format; compressed format support is planned)
+
+### Vault Operations
+- `search` - Search vault with advanced filtering, regex support, and snippet extraction
+- `search_waypoints` - Find all Waypoint plugin markers in the vault
+- `list` - List files and/or directories with advanced filtering and pagination
+- `stat` - Get detailed metadata for a file or folder
+- `exists` - Check if a file or folder exists at a specific path
+- `get_vault_info` - Get vault metadata (name, path, file counts, total size)
+
+### Waypoint Integration
+- `get_folder_waypoint` - Get Waypoint block from a folder note
+- `is_folder_note` - Check if a note is a folder note
+
+### Link Management
+- `validate_wikilinks` - Validate all wikilinks in a note and report unresolved links
+- `resolve_wikilink` - Resolve a single wikilink from a source note to its target path
+- `backlinks` - Get all backlinks to a note with optional unlinked mentions
 
 ## Installation
 
@@ -158,7 +177,7 @@ curl -X POST http://127.0.0.1:3000/mcp \
   "id": 5,
   "method": "tools/call",
   "params": {
-    "name": "search_notes",
+    "name": "search",
     "arguments": {
       "query": "search term"
     }

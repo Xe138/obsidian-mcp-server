@@ -6,38 +6,58 @@ import { GlobUtils } from '../utils/glob-utils';
 import { SearchUtils } from '../utils/search-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { LinkUtils } from '../utils/link-utils';
+import { IVaultAdapter, IMetadataCacheAdapter } from '../adapters/interfaces';
 
 export class VaultTools {
-	constructor(private app: App) {}
+	constructor(
+		private vault: IVaultAdapter,
+		private metadata: IMetadataCacheAdapter,
+		private app: App  // Still needed for waypoint methods (searchWaypoints, getFolderWaypoint, isFolderNote)
+	) {}
 
 	async getVaultInfo(): Promise<CallToolResult> {
-		const files = this.app.vault.getFiles();
-		const markdownFiles = this.app.vault.getMarkdownFiles();
-		const folders = this.app.vault.getAllLoadedFiles().filter(f => f instanceof TFolder);
-		
-		// Calculate total size
-		let totalSize = 0;
-		for (const file of files) {
-			if (file instanceof TFile) {
-				totalSize += file.stat.size;
-			}
-		}
-		
-		const info: VaultInfo = {
-			name: this.app.vault.getName(),
-			path: (this.app.vault.adapter as any).basePath || 'Unknown',
-			totalFiles: files.length,
-			totalFolders: folders.length,
-			markdownFiles: markdownFiles.length,
-			totalSize: totalSize
-		};
+		try {
+			const allFiles = this.vault.getMarkdownFiles();
+			const totalNotes = allFiles.length;
 
-		return {
-			content: [{
-				type: "text",
-				text: JSON.stringify(info, null, 2)
-			}]
-		};
+			// Calculate total size
+			let totalSize = 0;
+			for (const file of allFiles) {
+				const stat = this.vault.stat(file);
+				if (stat) {
+					totalSize += stat.size;
+				}
+			}
+
+			const info = {
+				totalNotes,
+				totalSize,
+				sizeFormatted: this.formatBytes(totalSize)
+			};
+
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(info, null, 2)
+				}]
+			};
+		} catch (error) {
+			return {
+				content: [{
+					type: "text",
+					text: `Get vault info error: ${(error as Error).message}`
+				}],
+				isError: true
+			};
+		}
+	}
+
+	private formatBytes(bytes: number): string {
+		if (bytes === 0) return '0 Bytes';
+		const k = 1024;
+		const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 	}
 
 	async listNotes(path?: string): Promise<CallToolResult> {
@@ -45,28 +65,12 @@ export class VaultTools {
 
 		// Normalize root path: undefined, empty string "", or "." all mean root
 		const isRootPath = !path || path === '' || path === '.';
-		
+
+		let targetFolder: TFolder;
+
 		if (isRootPath) {
-			// List direct children of the root
-			const allFiles = this.app.vault.getAllLoadedFiles();
-			for (const item of allFiles) {
-				// Skip the vault root itself
-				// The vault root can have path === '' or path === '/' depending on Obsidian version
-				if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
-					continue;
-				}
-				
-				// Check if this item is a direct child of root
-				// Root items have parent === null or parent.path === '' or parent.path === '/'
-				const itemParent = item.parent?.path || '';
-				if (itemParent === '' || itemParent === '/') {
-					if (item instanceof TFile) {
-						items.push(this.createFileMetadata(item));
-					} else if (item instanceof TFolder) {
-						items.push(this.createDirectoryMetadata(item));
-					}
-				}
-			}
+			// Get the root folder using adapter
+			targetFolder = this.vault.getRoot();
 		} else {
 			// Validate non-root path
 			if (!PathUtils.isValidVaultPath(path)) {
@@ -79,35 +83,38 @@ export class VaultTools {
 			// Normalize the path
 			const normalizedPath = PathUtils.normalizePath(path);
 
-			// Check if it's a folder
-			const folderObj = PathUtils.resolveFolder(this.app, normalizedPath);
+			// Get folder using adapter
+			const folderObj = this.vault.getAbstractFileByPath(normalizedPath);
+
 			if (!folderObj) {
-				// Check if it's a file instead
-				if (PathUtils.fileExists(this.app, normalizedPath)) {
-					return {
-						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
-						isError: true
-					};
-				}
-				
 				return {
 					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedPath) }],
 					isError: true
 				};
 			}
 
-			// Get direct children of the folder (non-recursive)
-			const allFiles = this.app.vault.getAllLoadedFiles();
-			for (const item of allFiles) {
-				// Check if this item is a direct child of the target folder
-				const itemParent = item.parent?.path || '';
-				if (itemParent === normalizedPath) {
-					if (item instanceof TFile) {
-						items.push(this.createFileMetadata(item));
-					} else if (item instanceof TFolder) {
-						items.push(this.createDirectoryMetadata(item));
-					}
-				}
+			// Check if it's a folder
+			if (!(folderObj instanceof TFolder)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
+					isError: true
+				};
+			}
+
+			targetFolder = folderObj;
+		}
+
+		// Iterate over direct children of the folder
+		for (const item of targetFolder.children) {
+			// Skip the vault root itself
+			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
+				continue;
+			}
+
+			if (item instanceof TFile) {
+				items.push(this.createFileMetadata(item));
+			} else if (item instanceof TFolder) {
+				items.push(this.createDirectoryMetadata(item));
 			}
 		}
 
@@ -155,9 +162,13 @@ export class VaultTools {
 
 		// Normalize root path: undefined, empty string "", or "." all mean root
 		const isRootPath = !path || path === '' || path === '.';
-		let normalizedPath = '';
 
-		if (!isRootPath) {
+		let targetFolder: TFolder;
+
+		if (isRootPath) {
+			// Get the root folder using adapter
+			targetFolder = this.vault.getRoot();
+		} else {
 			// Validate non-root path
 			if (!PathUtils.isValidVaultPath(path)) {
 				return {
@@ -167,87 +178,31 @@ export class VaultTools {
 			}
 
 			// Normalize the path
-			normalizedPath = PathUtils.normalizePath(path);
+			const normalizedPath = PathUtils.normalizePath(path);
 
-			// Check if it's a folder
-			const folderObj = PathUtils.resolveFolder(this.app, normalizedPath);
+			// Get folder using adapter
+			const folderObj = this.vault.getAbstractFileByPath(normalizedPath);
+
 			if (!folderObj) {
-				// Check if it's a file instead
-				if (PathUtils.fileExists(this.app, normalizedPath)) {
-					return {
-						content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
-						isError: true
-					};
-				}
-				
 				return {
 					content: [{ type: "text", text: ErrorMessages.folderNotFound(normalizedPath) }],
 					isError: true
 				};
 			}
+
+			// Check if it's a folder
+			if (!(folderObj instanceof TFolder)) {
+				return {
+					content: [{ type: "text", text: ErrorMessages.notAFolder(normalizedPath) }],
+					isError: true
+				};
+			}
+
+			targetFolder = folderObj;
 		}
 
 		// Collect items based on recursive flag
-		const allFiles = this.app.vault.getAllLoadedFiles();
-		
-		for (const item of allFiles) {
-			// Skip the vault root itself
-			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
-				continue;
-			}
-
-			// Determine if this item should be included based on path
-			let shouldIncludeItem = false;
-
-			if (isRootPath) {
-				if (recursive) {
-					// Include all items in the vault
-					shouldIncludeItem = true;
-				} else {
-					// Include only direct children of root
-					const itemParent = item.parent?.path || '';
-					shouldIncludeItem = (itemParent === '' || itemParent === '/');
-				}
-			} else {
-				if (recursive) {
-					// Include items that are descendants of the target folder
-					shouldIncludeItem = item.path.startsWith(normalizedPath + '/') || item.path === normalizedPath;
-					// Exclude the folder itself
-					if (item.path === normalizedPath) {
-						shouldIncludeItem = false;
-					}
-				} else {
-					// Include only direct children of the target folder
-					const itemParent = item.parent?.path || '';
-					shouldIncludeItem = (itemParent === normalizedPath);
-				}
-			}
-
-			if (!shouldIncludeItem) {
-				continue;
-			}
-
-			// Apply glob filtering
-			if (!GlobUtils.shouldInclude(item.path, includes, excludes)) {
-				continue;
-			}
-
-			// Apply type filtering
-			if (item instanceof TFile) {
-				if (only === 'directories') {
-					continue;
-				}
-				
-				const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary);
-				items.push(fileMetadata);
-			} else if (item instanceof TFolder) {
-				if (only === 'files') {
-					continue;
-				}
-				
-				items.push(this.createDirectoryMetadata(item));
-			}
-		}
+		await this.collectItems(targetFolder, items, recursive, includes, excludes, only, withFrontmatterSummary);
 
 		// Sort: directories first, then files, alphabetically within each group
 		items.sort((a, b) => {
@@ -295,22 +250,64 @@ export class VaultTools {
 		};
 	}
 
+	/**
+	 * Helper method to recursively collect items from a folder
+	 */
+	private async collectItems(
+		folder: TFolder,
+		items: Array<FileMetadataWithFrontmatter | DirectoryMetadata>,
+		recursive: boolean,
+		includes?: string[],
+		excludes?: string[],
+		only?: 'files' | 'directories' | 'any',
+		withFrontmatterSummary?: boolean
+	): Promise<void> {
+		for (const item of folder.children) {
+			// Skip the vault root itself
+			if (item.path === '' || item.path === '/' || (item instanceof TFolder && item.isRoot())) {
+				continue;
+			}
+
+			// Apply glob filtering
+			if (!GlobUtils.shouldInclude(item.path, includes, excludes)) {
+				continue;
+			}
+
+			// Apply type filtering and add items
+			if (item instanceof TFile) {
+				if (only !== 'directories') {
+					const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary || false);
+					items.push(fileMetadata);
+				}
+			} else if (item instanceof TFolder) {
+				if (only !== 'files') {
+					items.push(this.createDirectoryMetadata(item));
+				}
+
+				// Recursively collect from subfolders if needed
+				if (recursive) {
+					await this.collectItems(item, items, recursive, includes, excludes, only, withFrontmatterSummary);
+				}
+			}
+		}
+	}
+
 	private async createFileMetadataWithFrontmatter(
-		file: TFile, 
+		file: TFile,
 		withFrontmatterSummary: boolean
 	): Promise<FileMetadataWithFrontmatter> {
 		const baseMetadata = this.createFileMetadata(file);
-		
+
 		if (!withFrontmatterSummary || file.extension !== 'md') {
 			return baseMetadata;
 		}
 
 		// Extract frontmatter without reading full content
 		try {
-			const cache = this.app.metadataCache.getFileCache(file);
+			const cache = this.metadata.getFileCache(file);
 			if (cache?.frontmatter) {
 				const summary: FrontmatterSummary = {};
-				
+
 				// Extract common frontmatter fields
 				if (cache.frontmatter.title) {
 					summary.title = cache.frontmatter.title;
@@ -403,14 +400,30 @@ export class VaultTools {
 		// Normalize the path
 		const normalizedPath = PathUtils.normalizePath(path);
 
+		// Get file or folder using adapter
+		const item = this.vault.getAbstractFileByPath(normalizedPath);
+
+		if (!item) {
+			// Path doesn't exist
+			const result: StatResult = {
+				path: normalizedPath,
+				exists: false
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
 		// Check if it's a file
-		const file = PathUtils.resolveFile(this.app, normalizedPath);
-		if (file) {
+		if (item instanceof TFile) {
 			const result: StatResult = {
 				path: normalizedPath,
 				exists: true,
 				kind: "file",
-				metadata: this.createFileMetadata(file)
+				metadata: this.createFileMetadata(item)
 			};
 			return {
 				content: [{
@@ -421,13 +434,12 @@ export class VaultTools {
 		}
 
 		// Check if it's a folder
-		const folder = PathUtils.resolveFolder(this.app, normalizedPath);
-		if (folder) {
+		if (item instanceof TFolder) {
 			const result: StatResult = {
 				path: normalizedPath,
 				exists: true,
 				kind: "directory",
-				metadata: this.createDirectoryMetadata(folder)
+				metadata: this.createDirectoryMetadata(item)
 			};
 			return {
 				content: [{
@@ -437,7 +449,7 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist
+		// Path doesn't exist (shouldn't reach here)
 		const result: StatResult = {
 			path: normalizedPath,
 			exists: false
@@ -462,8 +474,25 @@ export class VaultTools {
 		// Normalize the path
 		const normalizedPath = PathUtils.normalizePath(path);
 
+		// Get file or folder using adapter
+		const item = this.vault.getAbstractFileByPath(normalizedPath);
+
+		if (!item) {
+			// Path doesn't exist
+			const result: ExistsResult = {
+				path: normalizedPath,
+				exists: false
+			};
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify(result, null, 2)
+				}]
+			};
+		}
+
 		// Check if it's a file
-		if (PathUtils.fileExists(this.app, normalizedPath)) {
+		if (item instanceof TFile) {
 			const result: ExistsResult = {
 				path: normalizedPath,
 				exists: true,
@@ -478,7 +507,7 @@ export class VaultTools {
 		}
 
 		// Check if it's a folder
-		if (PathUtils.folderExists(this.app, normalizedPath)) {
+		if (item instanceof TFolder) {
 			const result: ExistsResult = {
 				path: normalizedPath,
 				exists: true,
@@ -492,7 +521,7 @@ export class VaultTools {
 			};
 		}
 
-		// Path doesn't exist
+		// Path doesn't exist (shouldn't reach here)
 		const result: ExistsResult = {
 			path: normalizedPath,
 			exists: false
@@ -530,25 +559,134 @@ export class VaultTools {
 		} = options;
 
 		try {
-			const { matches, stats } = await SearchUtils.search(this.app, {
-				query,
-				isRegex,
-				caseSensitive,
-				includes,
-				excludes,
-				folder,
-				returnSnippets,
-				snippetLength,
-				maxResults
-			});
+			// Compile search pattern
+			let searchPattern: RegExp;
+			try {
+				if (isRegex) {
+					const flags = caseSensitive ? 'g' : 'gi';
+					searchPattern = new RegExp(query, flags);
+				} else {
+					// Escape special regex characters for literal search
+					const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+					const flags = caseSensitive ? 'g' : 'gi';
+					searchPattern = new RegExp(escapedQuery, flags);
+				}
+			} catch (error) {
+				return {
+					content: [{
+						type: "text",
+						text: `Invalid regex pattern: ${(error as Error).message}`
+					}],
+					isError: true
+				};
+			}
+
+			// Get files to search using adapter
+			let files = this.vault.getMarkdownFiles();
+
+			// Filter by folder if specified
+			if (folder) {
+				const folderPath = folder.endsWith('/') ? folder : folder + '/';
+				files = files.filter(file =>
+					file.path.startsWith(folderPath) || file.path === folder
+				);
+			}
+
+			// Apply glob filtering
+			if (includes || excludes) {
+				files = files.filter(file =>
+					GlobUtils.shouldInclude(file.path, includes, excludes)
+				);
+			}
+
+			const matches: SearchMatch[] = [];
+			const filesWithMatches = new Set<string>();
+			let filesSearched = 0;
+
+			// Search through files
+			for (const file of files) {
+				if (matches.length >= maxResults) {
+					break;
+				}
+
+				filesSearched++;
+
+				try {
+					const content = await this.vault.read(file);
+					const lines = content.split('\n');
+
+					// Search in content
+					for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+						if (matches.length >= maxResults) {
+							break;
+						}
+
+						const line = lines[lineIndex];
+
+						// Reset regex lastIndex for global patterns
+						searchPattern.lastIndex = 0;
+
+						let match: RegExpExecArray | null;
+						while ((match = searchPattern.exec(line)) !== null) {
+							if (matches.length >= maxResults) {
+								break;
+							}
+
+							const columnIndex = match.index;
+							const matchText = match[0];
+
+							// Extract snippet with context
+							let snippet = line;
+							let snippetStart = 0;
+							let matchStart = columnIndex;
+
+							if (returnSnippets && line.length > snippetLength) {
+								// Calculate snippet boundaries
+								const halfSnippet = Math.floor(snippetLength / 2);
+								snippetStart = Math.max(0, columnIndex - halfSnippet);
+								const snippetEnd = Math.min(line.length, snippetStart + snippetLength);
+
+								// Adjust if we're at the end of the line
+								if (snippetEnd === line.length && line.length > snippetLength) {
+									snippetStart = Math.max(0, line.length - snippetLength);
+								}
+
+								snippet = line.substring(snippetStart, snippetEnd);
+								matchStart = columnIndex - snippetStart;
+							}
+
+							matches.push({
+								path: file.path,
+								line: lineIndex + 1, // 1-indexed
+								column: columnIndex + 1, // 1-indexed
+								snippet: snippet,
+								matchRanges: [{
+									start: matchStart,
+									end: matchStart + matchText.length
+								}]
+							});
+
+							filesWithMatches.add(file.path);
+
+							// Prevent infinite loop for zero-width matches
+							if (match[0].length === 0) {
+								searchPattern.lastIndex++;
+							}
+						}
+					}
+				} catch (error) {
+					// Skip files that can't be read
+					console.error(`Failed to search file ${file.path}:`, error);
+				}
+			}
 
 			const result: SearchResult = {
 				query,
 				isRegex,
 				matches,
-				totalMatches: stats.totalMatches,
-				filesSearched: stats.filesSearched,
-				filesWithMatches: stats.filesWithMatches
+				totalMatches: matches.length,
+				filesSearched,
+				filesWithMatches: filesWithMatches.size
 			};
 
 			return {
@@ -699,10 +837,10 @@ export class VaultTools {
 		try {
 			// Normalize and validate path
 			const normalizedPath = PathUtils.normalizePath(path);
-			
-			// Resolve file
-			const file = PathUtils.resolveFile(this.app, normalizedPath);
-			if (!file) {
+
+			// Get file using adapter
+			const file = this.vault.getAbstractFileByPath(normalizedPath);
+			if (!file || !(file instanceof TFile)) {
 				return {
 					content: [{
 						type: "text",
@@ -712,11 +850,34 @@ export class VaultTools {
 				};
 			}
 
-			// Validate wikilinks
-			const { resolvedLinks, unresolvedLinks } = await LinkUtils.validateWikilinks(
-				this.app,
-				normalizedPath
-			);
+			// Read file content
+			const content = await this.vault.read(file);
+
+			// Parse wikilinks
+			const wikilinks = LinkUtils.parseWikilinks(content);
+
+			const resolvedLinks: any[] = [];
+			const unresolvedLinks: any[] = [];
+
+			for (const link of wikilinks) {
+				const resolvedFile = this.metadata.getFirstLinkpathDest(link.target, normalizedPath);
+
+				if (resolvedFile) {
+					resolvedLinks.push({
+						text: link.raw,
+						target: resolvedFile.path,
+						alias: link.alias
+					});
+				} else {
+					// Find suggestions (need to implement locally)
+					const suggestions = this.findLinkSuggestions(link.target);
+					unresolvedLinks.push({
+						text: link.raw,
+						line: link.line,
+						suggestions
+					});
+				}
+			}
 
 			const result: ValidateWikilinksResult = {
 				path: normalizedPath,
@@ -743,6 +904,56 @@ export class VaultTools {
 	}
 
 	/**
+	 * Find potential matches for an unresolved link
+	 */
+	private findLinkSuggestions(linkText: string, maxSuggestions: number = 5): string[] {
+		const allFiles = this.vault.getMarkdownFiles();
+		const suggestions: Array<{ path: string; score: number }> = [];
+
+		// Remove heading/block references for matching
+		const cleanLinkText = linkText.split('#')[0].split('^')[0].toLowerCase();
+
+		for (const file of allFiles) {
+			const fileName = file.basename.toLowerCase();
+			const filePath = file.path.toLowerCase();
+
+			// Calculate similarity score
+			let score = 0;
+
+			// Exact basename match (highest priority)
+			if (fileName === cleanLinkText) {
+				score = 1000;
+			}
+			// Basename contains link text
+			else if (fileName.includes(cleanLinkText)) {
+				score = 500 + (cleanLinkText.length / fileName.length) * 100;
+			}
+			// Path contains link text
+			else if (filePath.includes(cleanLinkText)) {
+				score = 250 + (cleanLinkText.length / filePath.length) * 100;
+			}
+			// Levenshtein-like: count matching characters
+			else {
+				let matchCount = 0;
+				for (const char of cleanLinkText) {
+					if (fileName.includes(char)) {
+						matchCount++;
+					}
+				}
+				score = (matchCount / cleanLinkText.length) * 100;
+			}
+
+			if (score > 0) {
+				suggestions.push({ path: file.path, score });
+			}
+		}
+
+		// Sort by score (descending) and return top N
+		suggestions.sort((a, b) => b.score - a.score);
+		return suggestions.slice(0, maxSuggestions).map(s => s.path);
+	}
+
+	/**
 	 * Resolve a single wikilink from a source note
 	 * Returns the target path if resolvable, or suggestions if not
 	 */
@@ -750,10 +961,10 @@ export class VaultTools {
 		try {
 			// Normalize and validate source path
 			const normalizedPath = PathUtils.normalizePath(sourcePath);
-			
-			// Resolve source file
-			const file = PathUtils.resolveFile(this.app, normalizedPath);
-			if (!file) {
+
+			// Get source file using adapter
+			const file = this.vault.getAbstractFileByPath(normalizedPath);
+			if (!file || !(file instanceof TFile)) {
 				return {
 					content: [{
 						type: "text",
@@ -763,8 +974,8 @@ export class VaultTools {
 				};
 			}
 
-			// Try to resolve the link
-			const resolvedFile = LinkUtils.resolveLink(this.app, normalizedPath, linkText);
+			// Try to resolve the link using metadata cache adapter
+			const resolvedFile = this.metadata.getFirstLinkpathDest(linkText, normalizedPath);
 
 			const result: ResolveWikilinkResult = {
 				sourcePath: normalizedPath,
@@ -775,7 +986,7 @@ export class VaultTools {
 
 			// If not resolved, provide suggestions
 			if (!resolvedFile) {
-				result.suggestions = LinkUtils.findSuggestions(this.app, linkText);
+				result.suggestions = this.findLinkSuggestions(linkText);
 			}
 
 			return {
@@ -807,10 +1018,10 @@ export class VaultTools {
 		try {
 			// Normalize and validate path
 			const normalizedPath = PathUtils.normalizePath(path);
-			
-			// Resolve file
-			const file = PathUtils.resolveFile(this.app, normalizedPath);
-			if (!file) {
+
+			// Get target file using adapter
+			const targetFile = this.vault.getAbstractFileByPath(normalizedPath);
+			if (!targetFile || !(targetFile instanceof TFile)) {
 				return {
 					content: [{
 						type: "text",
@@ -820,18 +1031,99 @@ export class VaultTools {
 				};
 			}
 
-			// Get backlinks
-			const backlinks = await LinkUtils.getBacklinks(
-				this.app,
-				normalizedPath,
-				includeUnlinked
-			);
+			// Get target file's basename for matching
+			const targetBasename = targetFile.basename;
 
-			// If snippets not requested, remove them
-			if (!includeSnippets) {
-				for (const backlink of backlinks) {
-					for (const occurrence of backlink.occurrences) {
-						occurrence.snippet = '';
+			// Get all backlinks from MetadataCache using resolvedLinks
+			const resolvedLinks = this.metadata.resolvedLinks;
+			const backlinks: any[] = [];
+
+			// Find all files that link to our target
+			for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
+				// Check if this source file links to our target
+				if (!links[normalizedPath]) {
+					continue;
+				}
+
+				const sourceFile = this.vault.getAbstractFileByPath(sourcePath);
+				if (!(sourceFile instanceof TFile)) {
+					continue;
+				}
+
+				// Read the source file to find link occurrences
+				const content = await this.vault.read(sourceFile);
+				const lines = content.split('\n');
+				const occurrences: any[] = [];
+
+				// Parse wikilinks in the source file to find references to target
+				const wikilinks = LinkUtils.parseWikilinks(content);
+
+				for (const link of wikilinks) {
+					// Resolve this link to see if it points to our target
+					const resolvedFile = this.metadata.getFirstLinkpathDest(link.target, sourcePath);
+
+					if (resolvedFile && resolvedFile.path === normalizedPath) {
+						const snippet = includeSnippets ? this.extractSnippet(lines, link.line - 1, 100) : '';
+						occurrences.push({
+							line: link.line,
+							snippet
+						});
+					}
+				}
+
+				if (occurrences.length > 0) {
+					backlinks.push({
+						sourcePath,
+						type: 'linked',
+						occurrences
+					});
+				}
+			}
+
+			// Process unlinked mentions if requested
+			if (includeUnlinked) {
+				const allFiles = this.vault.getMarkdownFiles();
+
+				// Build a set of files that already have linked backlinks
+				const linkedSourcePaths = new Set(backlinks.map(b => b.sourcePath));
+
+				for (const file of allFiles) {
+					// Skip if already in linked backlinks
+					if (linkedSourcePaths.has(file.path)) {
+						continue;
+					}
+
+					// Skip the target file itself
+					if (file.path === normalizedPath) {
+						continue;
+					}
+
+					const content = await this.vault.read(file);
+					const lines = content.split('\n');
+					const occurrences: any[] = [];
+
+					// Search for unlinked mentions of the target basename
+					for (let i = 0; i < lines.length; i++) {
+						const line = lines[i];
+
+						// Use word boundary regex to find whole word matches
+						const regex = new RegExp(`\\b${this.escapeRegex(targetBasename)}\\b`, 'gi');
+
+						if (regex.test(line)) {
+							const snippet = includeSnippets ? this.extractSnippet(lines, i, 100) : '';
+							occurrences.push({
+								line: i + 1, // 1-indexed
+								snippet
+							});
+						}
+					}
+
+					if (occurrences.length > 0) {
+						backlinks.push({
+							sourcePath: file.path,
+							type: 'unlinked',
+							occurrences
+						});
 					}
 				}
 			}
@@ -857,5 +1149,28 @@ export class VaultTools {
 				isError: true
 			};
 		}
+	}
+
+	/**
+	 * Extract a snippet of text around a specific line
+	 */
+	private extractSnippet(lines: string[], lineIndex: number, maxLength: number): string {
+		const line = lines[lineIndex] || '';
+
+		// If line is short enough, return it as-is
+		if (line.length <= maxLength) {
+			return line;
+		}
+
+		// Truncate and add ellipsis
+		const half = Math.floor(maxLength / 2);
+		return line.substring(0, half) + '...' + line.substring(line.length - half);
+	}
+
+	/**
+	 * Escape special regex characters
+	 */
+	private escapeRegex(str: string): string {
+		return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	}
 }
