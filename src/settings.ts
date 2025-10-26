@@ -26,7 +26,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		statusEl.createEl('p', {
 			text: isRunning
-				? `✅ Running on port ${this.plugin.settings.port}`
+				? `✅ Running on http://127.0.0.1:${this.plugin.settings.port}/mcp`
 				: '⭕ Stopped'
 		});
 
