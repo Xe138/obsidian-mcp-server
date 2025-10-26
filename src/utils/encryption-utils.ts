@@ -1,4 +1,11 @@
-import { safeStorage } from 'electron';
+// Safely import safeStorage - may not be available in all environments
+let safeStorage: any = null;
+try {
+	const electron = require('electron');
+	safeStorage = electron.safeStorage;
+} catch (error) {
+	console.warn('Electron safeStorage not available, API keys will be stored in plaintext');
+}
 
 /**
  * Encrypts an API key using Electron's safeStorage API
@@ -11,8 +18,8 @@ export function encryptApiKey(apiKey: string): string {
 		return '';
 	}
 
-	// Check if encryption is available
-	if (!safeStorage.isEncryptionAvailable()) {
+	// Check if safeStorage is available and encryption is enabled
+	if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
 		console.warn('Encryption not available, storing API key in plaintext');
 		return apiKey;
 	}
@@ -42,6 +49,12 @@ export function decryptApiKey(stored: string): string {
 		return stored;
 	}
 
+	// If safeStorage is not available, we can't decrypt
+	if (!safeStorage) {
+		console.error('Cannot decrypt API key: safeStorage not available');
+		throw new Error('Failed to decrypt API key. You may need to regenerate it.');
+	}
+
 	try {
 		const encryptedData = stored.substring(10); // Remove "encrypted:" prefix
 		const buffer = Buffer.from(encryptedData, 'base64');
@@ -57,5 +70,5 @@ export function decryptApiKey(stored: string): string {
  * @returns true if safeStorage encryption is available
  */
 export function isEncryptionAvailable(): boolean {
-	return safeStorage.isEncryptionAvailable();
+	return safeStorage !== null && safeStorage.isEncryptionAvailable();
 }
