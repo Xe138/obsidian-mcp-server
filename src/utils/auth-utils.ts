@@ -2,6 +2,8 @@
  * Utility functions for authentication and API key management
  */
 
+import { getCryptoRandomValues } from './crypto-adapter';
+
 /**
  * Generates a cryptographically secure random API key
  * @param length Length of the API key (default: 32 characters)
@@ -10,15 +12,15 @@
 export function generateApiKey(length: number = 32): string {
 	const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 	const values = new Uint8Array(length);
-	
-	// Use crypto.getRandomValues for cryptographically secure random numbers
-	crypto.getRandomValues(values);
-	
+
+	// Use cross-environment crypto adapter
+	getCryptoRandomValues(values);
+
 	let result = '';
 	for (let i = 0; i < length; i++) {
 		result += charset[values[i] % charset.length];
 	}
-	
+
 	return result;
 }
 
