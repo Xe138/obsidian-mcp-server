@@ -125,7 +125,7 @@ jobs:
           {
             "tag_name": "$TAG_VERSION",
             "name": "$TAG_VERSION",
-            "body": "Release $TAG_VERSION\n\n## Changes\n\n*Add release notes here before publishing*\n\n## Installation\n\n1. Download main.js, manifest.json, and styles.css\n2. Create a folder in .obsidian/plugins/obsidian-mcp-server/\n3. Copy the three files into the folder\n4. Reload Obsidian\n5. Enable the plugin in Settings → Community Plugins",
+            "body": "Release $TAG_VERSION\n\n## Changes\n\n*Add release notes here before publishing*\n\n## Installation\n\n1. Download main.js, manifest.json, and styles.css\n2. Create a folder in .obsidian/plugins/mcp-server/\n3. Copy the three files into the folder\n4. Reload Obsidian\n5. Enable the plugin in Settings → Community Plugins",
             "draft": true,
             "prerelease": false
           }

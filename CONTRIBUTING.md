@@ -1,6 +1,6 @@
-# Contributing to Obsidian MCP Server Plugin
+# Contributing to MCP Server Plugin
 
-Thank you for your interest in contributing to the Obsidian MCP Server Plugin! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to the MCP Server Plugin! This document provides guidelines and information for contributors.
 
 ## Table of Contents
 
@@ -64,12 +64,12 @@ For feature requests, please describe:
 
    **Linux/macOS:**
    ```bash
-   ln -s /path/to/your/dev/obsidian-mcp-server /path/to/vault/.obsidian/plugins/obsidian-mcp-server
+   ln -s /path/to/your/dev/obsidian-mcp-server /path/to/vault/.obsidian/plugins/mcp-server
    ```
 
    **Windows (Command Prompt as Administrator):**
    ```cmd
-   mklink /D "C:\path\to\vault\.obsidian\plugins\obsidian-mcp-server" "C:\path\to\your\dev\obsidian-mcp-server"
+   mklink /D "C:\path\to\vault\.obsidian\plugins\mcp-server" "C:\path\to\your\dev\obsidian-mcp-server"
    ```
 
 4. **Start development build:**

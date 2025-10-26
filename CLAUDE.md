@@ -27,7 +27,7 @@ The build command includes TypeScript type checking via `tsc -noEmit -skipLibChe
 
 ### Installing in Obsidian
 After building, the plugin outputs `main.js` to the root directory. To test in Obsidian:
-1. Copy `main.js`, `manifest.json`, and `styles.css` to your vault's `.obsidian/plugins/obsidian-mcp-server/` directory
+1. Copy `main.js`, `manifest.json`, and `styles.css` to your vault's `.obsidian/plugins/mcp-server/` directory
 2. Reload Obsidian (Ctrl/Cmd + R in dev mode)
 3. Enable the plugin in Settings → Community Plugins
 

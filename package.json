@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-mcp-server",
+	"name": "mcp-server",
 	"version": "1.0.0",
-	"description": "MCP (Model Context Protocol) server plugin for Obsidian - exposes vault operations via HTTP",
+	"description": "MCP (Model Context Protocol) server plugin - exposes vault operations via HTTP",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

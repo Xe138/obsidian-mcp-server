@@ -1,6 +1,6 @@
-# Obsidian MCP Server Plugin
+# MCP Server Plugin
 
-An Obsidian plugin that makes your vault accessible via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) over HTTP. This allows AI assistants and other MCP clients to interact with your Obsidian vault programmatically.
+A plugin that makes your vault accessible via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) over HTTP. This allows AI assistants and other MCP clients to interact with your vault programmatically.
 
 **Version:** 1.0.0 | **Tested with:** Obsidian v1.9.14 | **License:** MIT
 
