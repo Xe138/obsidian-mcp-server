@@ -199,7 +199,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		authSummary.style.fontWeight = 'bold';
 		authSummary.style.marginBottom = '12px';
 		authSummary.style.cursor = 'pointer';
-		authSummary.setText('Authentication');
+		authSummary.setText('Authentication & Configuration');
 
 		// API Key Display (always show - auth is always enabled)
 		new Setting(authDetails)
