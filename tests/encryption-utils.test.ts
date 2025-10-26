@@ -1,4 +1,4 @@
-import { encryptApiKey, decryptApiKey } from '../src/utils/encryption-utils';
+import { encryptApiKey, decryptApiKey, isEncryptionAvailable } from '../src/utils/encryption-utils';
 
 // Mock electron module
 jest.mock('electron', () => ({
@@ -68,6 +68,53 @@ describe('Encryption Utils', () => {
 
 			expect(decrypted).toBe(original);
 			expect(encrypted).not.toBe(original);
+		});
+	});
+
+	describe('error handling', () => {
+		it('should handle encryption errors and fallback to plaintext', () => {
+			const { safeStorage } = require('electron');
+			const originalEncrypt = safeStorage.encryptString;
+			safeStorage.encryptString = jest.fn(() => {
+				throw new Error('Encryption failed');
+			});
+
+			const apiKey = 'test-api-key-12345';
+			const result = encryptApiKey(apiKey);
+
+			expect(result).toBe(apiKey); // Should return plaintext on error
+			safeStorage.encryptString = originalEncrypt; // Restore
+		});
+
+		it('should throw error when decryption fails', () => {
+			const { safeStorage } = require('electron');
+			const originalDecrypt = safeStorage.decryptString;
+			safeStorage.decryptString = jest.fn(() => {
+				throw new Error('Decryption failed');
+			});
+
+			const encrypted = 'encrypted:aW52YWxpZA=='; // Invalid encrypted data
+
+			expect(() => decryptApiKey(encrypted)).toThrow('Failed to decrypt API key');
+			safeStorage.decryptString = originalDecrypt; // Restore
+		});
+	});
+
+	describe('isEncryptionAvailable', () => {
+		it('should return true when encryption is available', () => {
+			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
+			const { safeStorage } = require('electron');
+
+			safeStorage.isEncryptionAvailable.mockReturnValueOnce(true);
+			expect(isEncryptionAvailable()).toBe(true);
+		});
+
+		it('should return false when encryption is not available', () => {
+			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
+			const { safeStorage } = require('electron');
+
+			safeStorage.isEncryptionAvailable.mockReturnValueOnce(false);
+			expect(isEncryptionAvailable()).toBe(false);
 		});
 	});
 });
