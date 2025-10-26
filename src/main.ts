@@ -4,6 +4,8 @@ import { MCPPluginSettings, DEFAULT_SETTINGS } from './types/settings-types';
 import { MCPServerSettingTab } from './settings';
 import { NotificationManager } from './ui/notifications';
 import { NotificationHistoryModal } from './ui/notification-history';
+import { generateApiKey } from './utils/auth-utils';
+import { encryptApiKey, decryptApiKey } from './utils/encryption-utils';
 
 export default class MCPServerPlugin extends Plugin {
 	settings!: MCPPluginSettings;
@@ -13,6 +15,22 @@ export default class MCPServerPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		// Auto-generate API key if not set
+		if (!this.settings.apiKey || this.settings.apiKey.trim() === '') {
+			console.log('Generating new API key...');
+			this.settings.apiKey = generateApiKey();
+			await this.saveSettings();
+		}
+
+		// Migrate legacy settings (remove enableCORS and allowedOrigins)
+		const legacySettings = this.settings as any;
+		if ('enableCORS' in legacySettings || 'allowedOrigins' in legacySettings) {
+			console.log('Migrating legacy CORS settings...');
+			delete legacySettings.enableCORS;
+			delete legacySettings.allowedOrigins;
+			await this.saveSettings();
+		}
 
 		// Initialize notification manager
 		this.updateNotificationManager();
@@ -135,11 +153,33 @@ export default class MCPServerPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+		// Decrypt API key if encrypted
+		if (this.settings.apiKey) {
+			try {
+				this.settings.apiKey = decryptApiKey(this.settings.apiKey);
+			} catch (error) {
+				console.error('Failed to decrypt API key:', error);
+				new Notice('⚠️ Failed to decrypt API key. Please regenerate in settings.');
+				this.settings.apiKey = '';
+			}
+		}
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		// Create a copy of settings for saving
+		const settingsToSave = { ...this.settings };
+
+		// Encrypt API key before saving
+		if (settingsToSave.apiKey) {
+			settingsToSave.apiKey = encryptApiKey(settingsToSave.apiKey);
+		}
+
+		await this.saveData(settingsToSave);
+
+		// Update server settings if running
 		if (this.mcpServer) {
 			this.mcpServer.updateSettings(this.settings);
 		}
