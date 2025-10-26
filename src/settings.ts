@@ -84,15 +84,22 @@ export class MCPServerSettingTab extends PluginSettingTab {
 				}));
 
 		// Authentication (Always Enabled)
-		containerEl.createEl('h3', {text: 'Authentication'});
+		const authDetails = containerEl.createEl('details');
+		authDetails.style.marginBottom = '20px';
+		const authSummary = authDetails.createEl('summary');
+		authSummary.style.fontSize = '1.17em';
+		authSummary.style.fontWeight = 'bold';
+		authSummary.style.marginBottom = '12px';
+		authSummary.style.cursor = 'pointer';
+		authSummary.setText('Authentication');
 
 		// API Key Display (always show - auth is always enabled)
-		new Setting(containerEl)
+		new Setting(authDetails)
 			.setName('API Key Management')
-			.setDesc('Use this key in the Authorization header as Bearer token');
+			.setDesc('Use as Bearer token in Authorization header');
 
 		// Create a full-width container for buttons and key display
-		const apiKeyContainer = containerEl.createDiv({cls: 'mcp-api-key-section'});
+		const apiKeyContainer = authDetails.createDiv({cls: 'mcp-api-key-section'});
 		apiKeyContainer.style.marginBottom = '20px';
 		apiKeyContainer.style.marginLeft = '0';
 
