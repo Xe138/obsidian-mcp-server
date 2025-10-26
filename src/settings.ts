@@ -57,38 +57,6 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		// CORS setting
-		new Setting(containerEl)
-			.setName('Enable CORS')
-			.setDesc('Enable Cross-Origin Resource Sharing (requires restart)')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableCORS)
-				.onChange(async (value) => {
-					this.plugin.settings.enableCORS = value;
-					await this.plugin.saveSettings();
-					if (this.plugin.mcpServer?.isRunning()) {
-						new Notice('⚠️ Server restart required for CORS changes to take effect');
-					}
-				}));
-
-		// Allowed origins
-		new Setting(containerEl)
-			.setName('Allowed origins')
-			.setDesc('Comma-separated list of allowed origins (* for all, requires restart)')
-			.addText(text => text
-				.setPlaceholder('*')
-				.setValue(this.plugin.settings.allowedOrigins.join(', '))
-				.onChange(async (value) => {
-					this.plugin.settings.allowedOrigins = value
-						.split(',')
-						.map(s => s.trim())
-						.filter(s => s.length > 0);
-					await this.plugin.saveSettings();
-					if (this.plugin.mcpServer?.isRunning()) {
-						new Notice('⚠️ Server restart required for origin changes to take effect');
-					}
-				}));
-
 		// Authentication
 		new Setting(containerEl)
 			.setName('Enable authentication')

@@ -8,52 +8,51 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 	// Parse JSON bodies
 	app.use(express.json());
 
-	// CORS configuration
-	if (settings.enableCORS) {
-		const corsOptions = {
-			origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-				// Allow requests with no origin (like mobile apps or curl requests)
-				if (!origin) return callback(null, true);
-				
-				if (settings.allowedOrigins.includes('*') || 
-					settings.allowedOrigins.includes(origin)) {
-					callback(null, true);
-				} else {
-					callback(new Error('Not allowed by CORS'));
-				}
-			},
-			credentials: true
-		};
-		app.use(cors(corsOptions));
-	}
+	// CORS configuration - Always enabled with fixed localhost-only policy
+	const corsOptions = {
+		origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+			// Allow requests with no origin (like CLI clients, curl, MCP SDKs)
+			if (!origin) {
+				return callback(null, true);
+			}
 
-	// Authentication middleware
-	if (settings.enableAuth) {
-		app.use((req: Request, res: Response, next: any) => {
-			// Defensive check: if auth is enabled but no API key is set, reject all requests
-			if (!settings.apiKey || settings.apiKey.trim() === '') {
-				return res.status(500).json(createErrorResponse(null, ErrorCodes.InternalError, 'Server misconfigured: Authentication enabled but no API key set'));
+			// Allow localhost and 127.0.0.1 on any port, both HTTP and HTTPS
+			const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+			if (localhostRegex.test(origin)) {
+				callback(null, true);
+			} else {
+				callback(new Error('Not allowed by CORS'));
 			}
-			
-			const authHeader = req.headers.authorization;
-			const apiKey = authHeader?.replace('Bearer ', '');
-			
-			if (apiKey !== settings.apiKey) {
-				return res.status(401).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Unauthorized'));
-			}
-			next();
-		});
-	}
+		},
+		credentials: true
+	};
+	app.use(cors(corsOptions));
+
+	// Authentication middleware - Always enabled
+	app.use((req: Request, res: Response, next: any) => {
+		// Defensive check: if no API key is set, reject all requests
+		if (!settings.apiKey || settings.apiKey.trim() === '') {
+			return res.status(500).json(createErrorResponse(null, ErrorCodes.InternalError, 'Server misconfigured: No API key set'));
+		}
+
+		const authHeader = req.headers.authorization;
+		const providedKey = authHeader?.replace('Bearer ', '');
+
+		if (providedKey !== settings.apiKey) {
+			return res.status(401).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Unauthorized'));
+		}
+		next();
+	});
 
 	// Origin validation for security (DNS rebinding protection)
 	app.use((req: Request, res: Response, next: any) => {
 		const host = req.headers.host;
-		
+
 		// Only allow localhost connections
 		if (host && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
 			return res.status(403).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Only localhost connections allowed'));
 		}
-		
+
 		next();
 	});
 }
