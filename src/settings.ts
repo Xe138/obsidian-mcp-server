@@ -249,17 +249,12 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		keyDisplayContainer.style.marginBottom = '16px';
 		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
 
-		// MCP Client Configuration (show always, regardless of auth)
-		const configDetails = authDetails.createEl('details');
-		configDetails.style.marginTop = '16px';
-		const configSummary = configDetails.createEl('summary');
-		configSummary.style.fontSize = '1em';
-		configSummary.style.fontWeight = 'bold';
-		configSummary.style.marginBottom = '8px';
-		configSummary.style.cursor = 'pointer';
-		configSummary.setText('MCP Client Configuration');
+		// MCP Client Configuration heading
+		const configHeading = authDetails.createEl('h4', {text: 'MCP Client Configuration'});
+		configHeading.style.marginTop = '24px';
+		configHeading.style.marginBottom = '12px';
 
-		const configContainer = configDetails.createDiv({cls: 'mcp-config-snippet'});
+		const configContainer = authDetails.createDiv({cls: 'mcp-config-snippet'});
 		configContainer.style.marginBottom = '20px';
 		
 		const configDesc = configContainer.createEl('p', {
