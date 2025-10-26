@@ -2,7 +2,7 @@
 let safeStorage: any = null;
 try {
 	const electron = require('electron');
-	safeStorage = electron.safeStorage;
+	safeStorage = electron.safeStorage || null;
 } catch (error) {
 	console.warn('Electron safeStorage not available, API keys will be stored in plaintext');
 }
