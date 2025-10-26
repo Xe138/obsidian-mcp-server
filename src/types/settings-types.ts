@@ -1,10 +1,8 @@
 // Settings Types
 export interface MCPServerSettings {
 	port: number;
-	enableCORS: boolean;
-	allowedOrigins: string[];
-	apiKey?: string;
-	enableAuth: boolean;
+	apiKey: string; // Now required, not optional
+	enableAuth: boolean; // Will be removed in future, kept for migration
 }
 
 export interface NotificationSettings {
@@ -20,10 +18,8 @@ export interface MCPPluginSettings extends MCPServerSettings, NotificationSettin
 
 export const DEFAULT_SETTINGS: MCPPluginSettings = {
 	port: 3000,
-	enableCORS: true,
-	allowedOrigins: ['*'],
-	apiKey: '',
-	enableAuth: false,
+	apiKey: '', // Will be auto-generated on first load
+	enableAuth: true, // Always true now
 	autoStart: false,
 	// Notification defaults
 	notificationsEnabled: false,
