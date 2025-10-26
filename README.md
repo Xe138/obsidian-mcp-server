@@ -2,6 +2,12 @@
 
 An Obsidian plugin that makes your vault accessible via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io) over HTTP. This allows AI assistants and other MCP clients to interact with your Obsidian vault programmatically.
 
+**Version:** 1.0.0 | **Tested with:** Obsidian v1.9.14 | **License:** MIT
+
+> **⚠️ Security Notice**
+>
+> This plugin runs an HTTP server that exposes your vault's contents to MCP clients (like AI assistants). While the server is localhost-only with mandatory authentication, be aware that any client with your API key can read, create, modify, and delete files in your vault. Only share your API key with trusted applications.
+
 ## Features
 
 - **HTTP MCP Server**: Runs an HTTP server implementing the MCP protocol
@@ -41,12 +47,24 @@ An Obsidian plugin that makes your vault accessible via the [Model Context Proto
 
 ## Installation
 
+### From Obsidian Community Plugins
+
+> **Note:** This plugin is awaiting approval for the Community Plugins directory. Once approved, it will be available for one-click installation.
+
+When available:
+1. Open Obsidian Settings → Community Plugins
+2. Select **Browse** and search for "MCP Server"
+3. Click **Install**
+4. Enable the plugin
+
 ### From Source
+
+**Prerequisites:** Node.js and npm must be installed on your system.
 
 1. Clone this repository into your vault's plugins folder:
    ```bash
    cd /path/to/vault/.obsidian/plugins
-   git clone <repository-url> obsidian-mcp-server
+   git clone https://github.com/Xe138/obsidian-mcp-server.git obsidian-mcp-server
    cd obsidian-mcp-server
    ```
 
@@ -105,7 +123,13 @@ Example client configuration (e.g., for Claude Desktop):
 }
 ```
 
-Get your API key from the plugin settings. All requests must include the Bearer token:
+**To get your API key:**
+1. Open Obsidian Settings → MCP Server
+2. Find the **API Key** field in the Authentication section
+3. Click the copy icon to copy your API key to the clipboard
+4. Replace `YOUR_API_KEY` in the examples below with your actual key
+
+All requests must include the Bearer token:
 ```bash
 curl -X POST http://127.0.0.1:3000/mcp \
   -H "Authorization: Bearer YOUR_API_KEY" \
@@ -187,6 +211,52 @@ curl -X POST http://127.0.0.1:3000/mcp \
 }
 ```
 
+## Troubleshooting
+
+### Server won't start
+
+**Port already in use:**
+- Another application is using port 3000
+- Change the port in Settings → MCP Server → Port
+- Common alternatives: 3001, 8080, 8000
+
+**Permission denied:**
+- On Linux/macOS, ports below 1024 require root privileges
+- Use a port number above 1024 (default 3000 is fine)
+
+### Authentication failures
+
+**Invalid API key:**
+- Copy the API key again from Settings → MCP Server
+- Ensure you're including the full key with no extra spaces
+- Try regenerating the API key using the "Regenerate API Key" button
+
+**401 Unauthorized:**
+- Check that the `Authorization` header is properly formatted: `Bearer YOUR_API_KEY`
+- Verify there's a space between "Bearer" and the key
+
+### Connection issues
+
+**Cannot connect to server:**
+- Verify the server is running (check the ribbon icon or status in settings)
+- Ensure you're using `http://127.0.0.1:3000/mcp` (not `localhost` on some systems)
+- Check that no firewall is blocking local connections
+
+**CORS errors:**
+- The server only accepts requests from localhost origins
+- If using a web-based client, ensure it's running on `localhost` or `127.0.0.1`
+
+### General issues
+
+**Plugin not loading:**
+- Ensure you've enabled the plugin in Settings → Community Plugins
+- Try disabling and re-enabling the plugin
+- Check the Developer Console (Ctrl+Shift+I) for error messages
+
+**Changes not taking effect:**
+- Reload Obsidian (Ctrl/Cmd + R)
+- If building from source, ensure `npm run build` completed successfully
+
 ## Security Considerations
 
 The plugin implements multiple security layers:
@@ -212,26 +282,34 @@ npm run build  # Production build
 - Enable plugin in settings window.
 - For updates to the Obsidian API run `npm update` in the command line under your repo folder.
 
-## Funding URL
+## Contributing
 
-You can include funding URLs where people who use your plugin can financially support it.
+Contributions are welcome! If you'd like to contribute to this plugin:
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+### Reporting Issues
 
-If you have multiple URLs, you can also do:
+Found a bug or have a feature request? Please open an issue on GitHub:
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+**GitHub Issues:** https://github.com/Xe138/obsidian-mcp-server/issues
+
+When reporting bugs, please include:
+- Obsidian version
+- Plugin version
+- Steps to reproduce the issue
+- Any error messages from the Developer Console (Ctrl+Shift+I)
+
+## Support
+
+If you find this plugin helpful, consider supporting its development:
+
+**Buy Me a Coffee:** https://buymeacoffee.com/xe138
+
+## License
+
+This project is licensed under the MIT License. See the repository for full license details.
