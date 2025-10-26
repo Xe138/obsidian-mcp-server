@@ -291,31 +291,39 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			this.display();
 		});
 
-		// Generate JSON config (auth always included)
-		const mcpConfig = {
-			"mcpServers": {
-				"obsidian-mcp": {
-					"serverUrl": `http://127.0.0.1:${this.plugin.settings.port}/mcp`,
-					"headers": {
-						"Authorization": `Bearer ${this.plugin.settings.apiKey || 'YOUR_API_KEY_HERE'}`
-					}
-				}
-			}
-		};
+		// Get configuration for active tab
+		const {filePath, config, usageNote} = this.generateConfigForClient(this.activeConfigTab);
 
-		// Config display with copy button
-		const configButtonContainer = configContainer.createDiv();
-		configButtonContainer.style.display = 'flex';
-		configButtonContainer.style.gap = '8px';
-		configButtonContainer.style.marginBottom = '8px';
+		// Tab content area
+		const tabContent = configContainer.createDiv({cls: 'mcp-config-content'});
+		tabContent.style.marginTop = '16px';
 
-		const copyConfigButton = configButtonContainer.createEl('button', {text: '📋 Copy Configuration'});
+		// File location label
+		const fileLocationLabel = tabContent.createEl('p', {text: 'Configuration file location:'});
+		fileLocationLabel.style.marginBottom = '4px';
+		fileLocationLabel.style.fontSize = '0.9em';
+		fileLocationLabel.style.color = 'var(--text-muted)';
+
+		// File path display
+		const filePathDisplay = tabContent.createEl('div', {text: filePath});
+		filePathDisplay.style.padding = '8px';
+		filePathDisplay.style.backgroundColor = 'var(--background-secondary)';
+		filePathDisplay.style.borderRadius = '4px';
+		filePathDisplay.style.fontFamily = 'monospace';
+		filePathDisplay.style.fontSize = '0.9em';
+		filePathDisplay.style.marginBottom = '12px';
+		filePathDisplay.style.color = 'var(--text-muted)';
+
+		// Copy button
+		const copyConfigButton = tabContent.createEl('button', {text: '📋 Copy Configuration'});
+		copyConfigButton.style.marginBottom = '12px';
 		copyConfigButton.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(JSON.stringify(mcpConfig, null, 2));
+			await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
 			new Notice('✅ Configuration copied to clipboard');
 		});
 
-		const configDisplay = configContainer.createEl('pre');
+		// Config JSON display
+		const configDisplay = tabContent.createEl('pre');
 		configDisplay.style.padding = '12px';
 		configDisplay.style.backgroundColor = 'var(--background-secondary)';
 		configDisplay.style.borderRadius = '4px';
@@ -323,7 +331,14 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		configDisplay.style.overflowX = 'auto';
 		configDisplay.style.userSelect = 'text';
 		configDisplay.style.cursor = 'text';
-		configDisplay.textContent = JSON.stringify(mcpConfig, null, 2);
+		configDisplay.style.marginBottom = '12px';
+		configDisplay.textContent = JSON.stringify(config, null, 2);
+
+		// Usage note
+		const usageNoteDisplay = tabContent.createEl('p', {text: usageNote});
+		usageNoteDisplay.style.fontSize = '0.9em';
+		usageNoteDisplay.style.color = 'var(--text-muted)';
+		usageNoteDisplay.style.fontStyle = 'italic';
 
 		// Notification Settings
 		const notifDetails = containerEl.createEl('details');
