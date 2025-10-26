@@ -83,19 +83,22 @@ jobs:
           gh release create "$TAG_VERSION" \
             --title="$TAG_VERSION" \
             --draft \
-            --notes="Release $TAG_VERSION
+            --notes="$(cat <<'EOF'
+          Release $TAG_VERSION
 
-## Changes
+          ## Changes
 
-*Add release notes here before publishing*
+          *Add release notes here before publishing*
 
-## Installation
+          ## Installation
 
-1. Download \`main.js\`, \`manifest.json\`, and \`styles.css\`
-2. Create a folder in \`.obsidian/plugins/obsidian-mcp-server/\`
-3. Copy the three files into the folder
-4. Reload Obsidian
-5. Enable the plugin in Settings → Community Plugins" \
+          1. Download main.js, manifest.json, and styles.css
+          2. Create a folder in .obsidian/plugins/obsidian-mcp-server/
+          3. Copy the three files into the folder
+          4. Reload Obsidian
+          5. Enable the plugin in Settings → Community Plugins
+          EOF
+          )" \
             main.js \
             manifest.json \
             styles.css
