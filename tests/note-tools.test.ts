@@ -137,7 +137,7 @@ describe('NoteTools', () => {
 
 			(PathUtils.fileExists as jest.Mock).mockReturnValue(true);
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
-			mockVault.delete = jest.fn().mockResolvedValue(undefined);
+			mockFileManager.trashFile = jest.fn().mockResolvedValue(undefined);
 			mockVault.create = jest.fn().mockResolvedValue(mockFile);
 			(PathUtils.folderExists as jest.Mock).mockReturnValue(false);
 			(PathUtils.getParentPath as jest.Mock).mockReturnValue('');
@@ -145,7 +145,7 @@ describe('NoteTools', () => {
 			const result = await noteTools.createNote('test.md', 'content', false, 'overwrite');
 
 			expect(result.isError).toBeUndefined();
-			expect(mockVault.delete).toHaveBeenCalledWith(mockFile);
+			expect(mockFileManager.trashFile).toHaveBeenCalledWith(mockFile);
 			expect(mockVault.create).toHaveBeenCalled();
 		});
 
@@ -344,12 +344,12 @@ describe('NoteTools', () => {
 			const mockFile = createMockTFile('test.md');
 
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
-			mockVault.delete = jest.fn().mockResolvedValue(undefined);
+			mockFileManager.trashFile = jest.fn().mockResolvedValue(undefined);
 
 			const result = await noteTools.deleteNote('test.md', false, false);
 
 			expect(result.isError).toBeUndefined();
-			expect(mockVault.delete).toHaveBeenCalledWith(mockFile);
+			expect(mockFileManager.trashFile).toHaveBeenCalledWith(mockFile);
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.deleted).toBe(true);
 			expect(parsed.soft).toBe(false);

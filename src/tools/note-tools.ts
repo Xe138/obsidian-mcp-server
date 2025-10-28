@@ -159,7 +159,7 @@ export class NoteTools {
 				const existingFile = PathUtils.resolveFile(this.app, normalizedPath);
 				/* istanbul ignore next */
 				if (existingFile) {
-					await this.vault.delete(existingFile);
+					await this.fileManager.trashFile(existingFile);
 				}
 			} else if (onConflict === 'rename') {
 				// Generate a unique name
@@ -542,8 +542,8 @@ export class NoteTools {
 				await this.vault.trash(file, true);
 				destination = `.trash/${file.name}`;
 			} else {
-				// Permanent deletion
-				await this.vault.delete(file);
+				// Delete using user's preferred trash settings (system trash or .trash/ folder)
+				await this.fileManager.trashFile(file);
 			}
 
 			const result: DeleteNoteResult = {
