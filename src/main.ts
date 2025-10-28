@@ -51,7 +51,7 @@ export default class MCPServerPlugin extends Plugin {
 		// Register commands
 		this.addCommand({
 			id: 'start-mcp-server',
-			name: 'Start MCP Server',
+			name: 'Start server',
 			callback: async () => {
 				await this.startServer();
 			}
@@ -59,7 +59,7 @@ export default class MCPServerPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'stop-mcp-server',
-			name: 'Stop MCP Server',
+			name: 'Stop server',
 			callback: async () => {
 				await this.stopServer();
 			}
@@ -67,7 +67,7 @@ export default class MCPServerPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'restart-mcp-server',
-			name: 'Restart MCP Server',
+			name: 'Restart server',
 			callback: async () => {
 				await this.stopServer();
 				await this.startServer();
@@ -76,7 +76,7 @@ export default class MCPServerPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'view-notification-history',
-			name: 'View MCP Notification History',
+			name: 'View notification history',
 			callback: () => {
 				this.showNotificationHistory();
 			}
