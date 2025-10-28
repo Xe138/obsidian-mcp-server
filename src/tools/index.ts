@@ -232,7 +232,7 @@ export class ToolRegistry {
 						excludes: {
 							type: "array",
 							items: { type: "string" },
-							description: "Glob patterns to exclude (e.g., ['.obsidian/**', '*.tmp']). Files matching these patterns will be skipped. Takes precedence over includes."
+							description: "Glob patterns to exclude (e.g., ['templates/**', '*.tmp']). Files matching these patterns will be skipped. Takes precedence over includes."
 						},
 						folder: {
 							type: "string",
@@ -297,7 +297,7 @@ export class ToolRegistry {
 						excludes: {
 							type: "array",
 							items: { type: "string" },
-							description: "Glob patterns to exclude (e.g., ['.obsidian/**', '*.tmp']). Takes precedence over includes."
+							description: "Glob patterns to exclude (e.g., ['templates/**', '*.tmp']). Takes precedence over includes."
 						},
 						only: {
 							type: "string",
