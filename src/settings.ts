@@ -195,13 +195,8 @@ export class MCPServerSettingTab extends PluginSettingTab {
 				}));
 
 		// Authentication (Always Enabled)
-		const authDetails = containerEl.createEl('details');
-		authDetails.style.marginBottom = '20px';
-		const authSummary = authDetails.createEl('summary');
-		authSummary.style.fontSize = '1.17em';
-		authSummary.style.fontWeight = 'bold';
-		authSummary.style.marginBottom = '12px';
-		authSummary.style.cursor = 'pointer';
+		const authDetails = containerEl.createEl('details', {cls: 'mcp-auth-section'});
+		const authSummary = authDetails.createEl('summary', {cls: 'mcp-auth-summary'});
 		authSummary.setText('Authentication & Configuration');
 
 		// Store reference for targeted updates
@@ -213,15 +208,10 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			.setDesc('Use as Bearer token in Authorization header');
 
 		// Create a full-width container for buttons and key display
-		const apiKeyContainer = authDetails.createDiv({cls: 'mcp-api-key-section'});
-		apiKeyContainer.style.marginBottom = '20px';
-		apiKeyContainer.style.marginLeft = '0';
+		const apiKeyContainer = authDetails.createDiv({cls: 'mcp-container'});
 
 		// Create button container
-		const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-buttons'});
-		apiKeyButtonContainer.style.display = 'flex';
-		apiKeyButtonContainer.style.gap = '8px';
-		apiKeyButtonContainer.style.marginBottom = '12px';
+		const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-button-group'});
 
 		// Copy button
 		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
@@ -243,61 +233,35 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		});
 
 		// API Key display (static, copyable text)
-		const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-api-key-display'});
-		keyDisplayContainer.style.padding = '12px';
-		keyDisplayContainer.style.backgroundColor = 'var(--background-secondary)';
-		keyDisplayContainer.style.borderRadius = '4px';
-		keyDisplayContainer.style.fontFamily = 'monospace';
-		keyDisplayContainer.style.fontSize = '0.9em';
-		keyDisplayContainer.style.wordBreak = 'break-all';
-		keyDisplayContainer.style.userSelect = 'all';
-		keyDisplayContainer.style.cursor = 'text';
-		keyDisplayContainer.style.marginBottom = '16px';
+		const keyDisplayContainer = apiKeyContainer.createDiv({cls: 'mcp-key-display'});
 		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
 
 		// MCP Client Configuration heading
-		const configHeading = authDetails.createEl('h4', {text: 'MCP Client Configuration'});
-		configHeading.style.marginTop = '24px';
-		configHeading.style.marginBottom = '12px';
+		authDetails.createEl('h4', {text: 'MCP Client Configuration', cls: 'mcp-heading'});
 
-		const configContainer = authDetails.createDiv({cls: 'mcp-config-snippet'});
-		configContainer.style.marginBottom = '20px';
+		const configContainer = authDetails.createDiv({cls: 'mcp-container'});
 
 		// Store reference for targeted updates
 		this.configContainerEl = configContainer;
 
 		// Tab buttons for switching between clients
 		const tabContainer = configContainer.createDiv({cls: 'mcp-config-tabs'});
-		tabContainer.style.display = 'flex';
-		tabContainer.style.gap = '8px';
-		tabContainer.style.marginBottom = '16px';
-		tabContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
 
 		// Windsurf tab button
-		const windsurfTab = tabContainer.createEl('button', {text: 'Windsurf'});
-		windsurfTab.style.padding = '8px 16px';
-		windsurfTab.style.border = 'none';
-		windsurfTab.style.background = 'none';
-		windsurfTab.style.cursor = 'pointer';
-		windsurfTab.style.borderBottom = this.activeConfigTab === 'windsurf'
-			? '2px solid var(--interactive-accent)'
-			: '2px solid transparent';
-		windsurfTab.style.fontWeight = this.activeConfigTab === 'windsurf' ? 'bold' : 'normal';
+		const windsurfTab = tabContainer.createEl('button', {
+			text: 'Windsurf',
+			cls: this.activeConfigTab === 'windsurf' ? 'mcp-tab mcp-tab-active' : 'mcp-tab'
+		});
 		windsurfTab.addEventListener('click', () => {
 			this.activeConfigTab = 'windsurf';
 			this.updateConfigSection();
 		});
 
 		// Claude Code tab button
-		const claudeCodeTab = tabContainer.createEl('button', {text: 'Claude Code'});
-		claudeCodeTab.style.padding = '8px 16px';
-		claudeCodeTab.style.border = 'none';
-		claudeCodeTab.style.background = 'none';
-		claudeCodeTab.style.cursor = 'pointer';
-		claudeCodeTab.style.borderBottom = this.activeConfigTab === 'claude-code'
-			? '2px solid var(--interactive-accent)'
-			: '2px solid transparent';
-		claudeCodeTab.style.fontWeight = this.activeConfigTab === 'claude-code' ? 'bold' : 'normal';
+		const claudeCodeTab = tabContainer.createEl('button', {
+			text: 'Claude Code',
+			cls: this.activeConfigTab === 'claude-code' ? 'mcp-tab mcp-tab-active' : 'mcp-tab'
+		});
 		claudeCodeTab.addEventListener('click', () => {
 			this.activeConfigTab = 'claude-code';
 			this.updateConfigSection();
@@ -308,58 +272,33 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Tab content area
 		const tabContent = configContainer.createDiv({cls: 'mcp-config-content'});
-		tabContent.style.marginTop = '16px';
 
 		// File location label
-		const fileLocationLabel = tabContent.createEl('p', {text: 'Configuration file location:'});
-		fileLocationLabel.style.marginBottom = '4px';
-		fileLocationLabel.style.fontSize = '0.9em';
-		fileLocationLabel.style.color = 'var(--text-muted)';
+		tabContent.createEl('p', {text: 'Configuration file location:', cls: 'mcp-label'});
 
 		// File path display
-		const filePathDisplay = tabContent.createEl('div', {text: filePath});
-		filePathDisplay.style.padding = '8px';
-		filePathDisplay.style.backgroundColor = 'var(--background-secondary)';
-		filePathDisplay.style.borderRadius = '4px';
-		filePathDisplay.style.fontFamily = 'monospace';
-		filePathDisplay.style.fontSize = '0.9em';
-		filePathDisplay.style.marginBottom = '12px';
-		filePathDisplay.style.color = 'var(--text-muted)';
+		tabContent.createEl('div', {text: filePath, cls: 'mcp-file-path'});
 
 		// Copy button
-		const copyConfigButton = tabContent.createEl('button', {text: '📋 Copy Configuration'});
-		copyConfigButton.style.marginBottom = '12px';
+		const copyConfigButton = tabContent.createEl('button', {
+			text: '📋 Copy Configuration',
+			cls: 'mcp-config-button'
+		});
 		copyConfigButton.addEventListener('click', async () => {
 			await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
 			new Notice('✅ Configuration copied to clipboard');
 		});
 
 		// Config JSON display
-		const configDisplay = tabContent.createEl('pre');
-		configDisplay.style.padding = '12px';
-		configDisplay.style.backgroundColor = 'var(--background-secondary)';
-		configDisplay.style.borderRadius = '4px';
-		configDisplay.style.fontSize = '0.85em';
-		configDisplay.style.overflowX = 'auto';
-		configDisplay.style.userSelect = 'text';
-		configDisplay.style.cursor = 'text';
-		configDisplay.style.marginBottom = '12px';
+		const configDisplay = tabContent.createEl('pre', {cls: 'mcp-config-display'});
 		configDisplay.textContent = JSON.stringify(config, null, 2);
 
 		// Usage note
-		const usageNoteDisplay = tabContent.createEl('p', {text: usageNote});
-		usageNoteDisplay.style.fontSize = '0.9em';
-		usageNoteDisplay.style.color = 'var(--text-muted)';
-		usageNoteDisplay.style.fontStyle = 'italic';
+		tabContent.createEl('p', {text: usageNote, cls: 'mcp-usage-note'});
 
 		// Notification Settings
-		const notifDetails = containerEl.createEl('details');
-		notifDetails.style.marginBottom = '20px';
-		const notifSummary = notifDetails.createEl('summary');
-		notifSummary.style.fontSize = '1.17em';
-		notifSummary.style.fontWeight = 'bold';
-		notifSummary.style.marginBottom = '12px';
-		notifSummary.style.cursor = 'pointer';
+		const notifDetails = containerEl.createEl('details', {cls: 'mcp-auth-section'});
+		const notifSummary = notifDetails.createEl('summary', {cls: 'mcp-auth-summary'});
 		notifSummary.setText('UI Notifications');
 
 		// Store reference for targeted updates
@@ -436,36 +375,22 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Tab buttons for switching between clients
 		const tabContainer = this.configContainerEl.createDiv({cls: 'mcp-config-tabs'});
-		tabContainer.style.display = 'flex';
-		tabContainer.style.gap = '8px';
-		tabContainer.style.marginBottom = '16px';
-		tabContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
 
 		// Windsurf tab button
-		const windsurfTab = tabContainer.createEl('button', {text: 'Windsurf'});
-		windsurfTab.style.padding = '8px 16px';
-		windsurfTab.style.border = 'none';
-		windsurfTab.style.background = 'none';
-		windsurfTab.style.cursor = 'pointer';
-		windsurfTab.style.borderBottom = this.activeConfigTab === 'windsurf'
-			? '2px solid var(--interactive-accent)'
-			: '2px solid transparent';
-		windsurfTab.style.fontWeight = this.activeConfigTab === 'windsurf' ? 'bold' : 'normal';
+		const windsurfTab = tabContainer.createEl('button', {
+			text: 'Windsurf',
+			cls: this.activeConfigTab === 'windsurf' ? 'mcp-tab mcp-tab-active' : 'mcp-tab'
+		});
 		windsurfTab.addEventListener('click', () => {
 			this.activeConfigTab = 'windsurf';
 			this.updateConfigSection();
 		});
 
 		// Claude Code tab button
-		const claudeCodeTab = tabContainer.createEl('button', {text: 'Claude Code'});
-		claudeCodeTab.style.padding = '8px 16px';
-		claudeCodeTab.style.border = 'none';
-		claudeCodeTab.style.background = 'none';
-		claudeCodeTab.style.cursor = 'pointer';
-		claudeCodeTab.style.borderBottom = this.activeConfigTab === 'claude-code'
-			? '2px solid var(--interactive-accent)'
-			: '2px solid transparent';
-		claudeCodeTab.style.fontWeight = this.activeConfigTab === 'claude-code' ? 'bold' : 'normal';
+		const claudeCodeTab = tabContainer.createEl('button', {
+			text: 'Claude Code',
+			cls: this.activeConfigTab === 'claude-code' ? 'mcp-tab mcp-tab-active' : 'mcp-tab'
+		});
 		claudeCodeTab.addEventListener('click', () => {
 			this.activeConfigTab = 'claude-code';
 			this.updateConfigSection();
@@ -476,49 +401,29 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Tab content area
 		const tabContent = this.configContainerEl.createDiv({cls: 'mcp-config-content'});
-		tabContent.style.marginTop = '16px';
 
 		// File location label
-		const fileLocationLabel = tabContent.createEl('p', {text: 'Configuration file location:'});
-		fileLocationLabel.style.marginBottom = '4px';
-		fileLocationLabel.style.fontSize = '0.9em';
-		fileLocationLabel.style.color = 'var(--text-muted)';
+		tabContent.createEl('p', {text: 'Configuration file location:', cls: 'mcp-label'});
 
 		// File path display
-		const filePathDisplay = tabContent.createEl('div', {text: filePath});
-		filePathDisplay.style.padding = '8px';
-		filePathDisplay.style.backgroundColor = 'var(--background-secondary)';
-		filePathDisplay.style.borderRadius = '4px';
-		filePathDisplay.style.fontFamily = 'monospace';
-		filePathDisplay.style.fontSize = '0.9em';
-		filePathDisplay.style.marginBottom = '12px';
-		filePathDisplay.style.color = 'var(--text-muted)';
+		tabContent.createEl('div', {text: filePath, cls: 'mcp-file-path'});
 
 		// Copy button
-		const copyConfigButton = tabContent.createEl('button', {text: '📋 Copy Configuration'});
-		copyConfigButton.style.marginBottom = '12px';
+		const copyConfigButton = tabContent.createEl('button', {
+			text: '📋 Copy Configuration',
+			cls: 'mcp-config-button'
+		});
 		copyConfigButton.addEventListener('click', async () => {
 			await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
 			new Notice('✅ Configuration copied to clipboard');
 		});
 
 		// Config JSON display
-		const configDisplay = tabContent.createEl('pre');
-		configDisplay.style.padding = '12px';
-		configDisplay.style.backgroundColor = 'var(--background-secondary)';
-		configDisplay.style.borderRadius = '4px';
-		configDisplay.style.fontSize = '0.85em';
-		configDisplay.style.overflowX = 'auto';
-		configDisplay.style.userSelect = 'text';
-		configDisplay.style.cursor = 'text';
-		configDisplay.style.marginBottom = '12px';
+		const configDisplay = tabContent.createEl('pre', {cls: 'mcp-config-display'});
 		configDisplay.textContent = JSON.stringify(config, null, 2);
 
 		// Usage note
-		const usageNoteDisplay = tabContent.createEl('p', {text: usageNote});
-		usageNoteDisplay.style.fontSize = '0.9em';
-		usageNoteDisplay.style.color = 'var(--text-muted)';
-		usageNoteDisplay.style.fontStyle = 'italic';
+		tabContent.createEl('p', {text: usageNote, cls: 'mcp-usage-note'});
 
 		// Restore open state (only if authDetailsEl is available)
 		if (this.authDetailsEl) {

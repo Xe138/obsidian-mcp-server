@@ -51,3 +51,103 @@
 	margin: 0.5em 0 0.25em 0;
 	font-weight: 600;
 }
+
+/* Authentication section */
+.mcp-auth-section { margin-bottom: 20px; }
+.mcp-auth-summary {
+	font-size: 1.17em;
+	font-weight: bold;
+	margin-bottom: 12px;
+	cursor: pointer;
+}
+
+/* API key display */
+.mcp-key-display {
+	padding: 12px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 0.9em;
+	word-break: break-all;
+	user-select: all;
+	cursor: text;
+	margin-bottom: 16px;
+}
+
+/* Tab navigation */
+.mcp-config-tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mcp-tab {
+	padding: 8px 16px;
+	border: none;
+	background: none;
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+}
+
+.mcp-tab-active {
+	border-bottom-color: var(--interactive-accent);
+	font-weight: bold;
+}
+
+/* Config display */
+.mcp-config-display {
+	padding: 12px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-size: 0.85em;
+	overflow-x: auto;
+	user-select: text;
+	cursor: text;
+	margin-bottom: 12px;
+}
+
+/* Helper text */
+.mcp-file-path {
+	padding: 8px;
+	background-color: var(--background-secondary);
+	border-radius: 4px;
+	font-family: monospace;
+	font-size: 0.9em;
+	margin-bottom: 12px;
+	color: var(--text-muted);
+}
+
+.mcp-usage-note {
+	font-size: 0.9em;
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+/* Additional utility classes */
+.mcp-heading {
+	margin-top: 24px;
+	margin-bottom: 12px;
+}
+
+.mcp-container { margin-bottom: 20px; }
+
+.mcp-button-group {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.mcp-label {
+	margin-bottom: 4px;
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-config-content {
+	margin-top: 16px;
+}
+
+.mcp-config-button {
+	margin-bottom: 12px;
+}
