@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Updated config path examples from `.obsidian/**` to `templates/**` in tool descriptions to avoid implying hardcoded configuration directory paths
+- Removed "MCP Server" from command display names per Obsidian plugin guidelines (commands now show as "Start server", "Stop server", etc.)
+- Replaced deprecated `vault.delete()` with `app.fileManager.trashFile()` to respect user's trash preferences configured in Obsidian settings
+- Extracted all inline JavaScript styles to semantic CSS classes with `mcp-*` namespace for better maintainability and Obsidian plugin compliance
+- Applied CSS extraction to notification history modal for consistency
+
+### Changed
+- Command palette entries now display shorter names without redundant plugin name prefix
+- File deletion operations now respect user's configured trash location (system trash or `.trash/` folder)
+- Settings panel and notification history UI now use centralized CSS classes instead of inline styles
+
+---
+
 ## [1.0.0] - 2025-10-26
 
 ### 🎉 Initial Public Release
