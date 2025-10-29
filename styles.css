@@ -151,3 +151,85 @@
 .mcp-config-button {
 	margin-bottom: 12px;
 }
+
+/* Notification History Modal */
+.mcp-notification-history-modal {
+	/* Base modal styling handled by Obsidian */
+}
+
+.mcp-history-filters {
+	margin-bottom: 16px;
+}
+
+.mcp-history-count {
+	margin-top: 8px;
+	font-size: 0.9em;
+	color: var(--text-muted);
+}
+
+.mcp-history-list {
+	max-height: 400px;
+	overflow-y: auto;
+	margin-bottom: 16px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.mcp-history-empty {
+	padding: 24px;
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.mcp-history-entry {
+	padding: 12px;
+}
+
+.mcp-history-entry-header {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.mcp-history-entry-header-meta {
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.mcp-history-entry-args {
+	font-size: 0.85em;
+	font-family: monospace;
+	background-color: var(--background-secondary);
+	padding: 8px;
+	border-radius: 4px;
+	margin-bottom: 8px;
+	overflow-x: auto;
+}
+
+.mcp-history-entry-error {
+	font-size: 0.85em;
+	color: var(--text-error);
+	background-color: var(--background-secondary);
+	padding: 8px;
+	border-radius: 4px;
+	font-family: monospace;
+}
+
+.mcp-history-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+/* Dynamic state classes */
+.mcp-history-entry-border {
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mcp-history-entry-title-success {
+	color: var(--text-success);
+}
+
+.mcp-history-entry-title-error {
+	color: var(--text-error);
+}
