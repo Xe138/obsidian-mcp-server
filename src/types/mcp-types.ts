@@ -248,6 +248,8 @@ export interface UpdateSectionsResult {
 	versionId: string;
 	modified: number;
 	sectionsUpdated: number;
+	wordCount?: number;
+	linkValidation?: LinkValidationResult;
 }
 
 /**
@@ -260,6 +262,8 @@ export interface CreateNoteResult {
 	created: number;
 	renamed?: boolean;
 	originalPath?: string;
+	wordCount?: number;
+	linkValidation?: LinkValidationResult;
 }
 
 /**
@@ -303,6 +307,35 @@ export interface UnresolvedLink {
 	text: string;
 	line: number;
 	suggestions: string[];
+}
+
+/**
+ * Broken link information (note doesn't exist)
+ */
+export interface BrokenNoteLink {
+	link: string;
+	line: number;
+	context: string;
+}
+
+/**
+ * Broken heading link information (note exists but heading doesn't)
+ */
+export interface BrokenHeadingLink {
+	link: string;
+	line: number;
+	context: string;
+	note: string;
+}
+
+/**
+ * Link validation result for write operations
+ */
+export interface LinkValidationResult {
+	valid: string[];
+	brokenNotes: BrokenNoteLink[];
+	brokenHeadings: BrokenHeadingLink[];
+	summary: string;
 }
 
 /**

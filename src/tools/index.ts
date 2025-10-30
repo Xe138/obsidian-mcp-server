@@ -53,7 +53,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "create_note",
-				description: "Create a new file in the Obsidian vault with conflict handling. Returns structured JSON with success status, path, versionId, created timestamp, and conflict resolution details. Supports automatic parent folder creation and three conflict strategies: 'error' (default, fail if exists), 'overwrite' (replace existing), 'rename' (auto-generate unique name). Use this to create new notes with robust error handling.",
+				description: "Create a new file in the Obsidian vault with conflict handling. Returns structured JSON with success status, path, versionId, created timestamp, conflict resolution details, word count (excluding frontmatter and Obsidian comments), and link validation results. Automatically validates all wikilinks, heading links, and embeds, categorizing them as valid, broken notes, or broken headings. Supports automatic parent folder creation and three conflict strategies: 'error' (default, fail if exists), 'overwrite' (replace existing), 'rename' (auto-generate unique name). Use this to create new notes with robust error handling and automatic content analysis.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -73,6 +73,10 @@ export class ToolRegistry {
 							type: "string",
 							enum: ["error", "overwrite", "rename"],
 							description: "Conflict resolution strategy if file already exists. 'error' (default): fail with error. 'overwrite': delete existing file and create new. 'rename': auto-generate unique name by appending number. Default: 'error'"
+						},
+						validateLinks: {
+							type: "boolean",
+							description: "If true (default), automatically validate all wikilinks and embeds in the note, returning detailed broken link information. If false, skip link validation for better performance. Link validation checks [[wikilinks]], [[note#heading]] links, and ![[embeds]]. Default: true"
 						}
 					},
 					required: ["path", "content"]
@@ -80,7 +84,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "update_note",
-				description: "Update (overwrite) an existing file in the Obsidian vault. Use this to modify the contents of an existing note. This REPLACES the entire file content. The file must already exist. Path must be vault-relative with file extension. Use read_note() first to get current content if you want to make partial changes.",
+				description: "Update (overwrite) an existing file in the Obsidian vault. Returns structured JSON with success status, path, versionId, modified timestamp, word count (excluding frontmatter and Obsidian comments), and link validation results. Automatically validates all wikilinks, heading links, and embeds, categorizing them as valid, broken notes, or broken headings. This REPLACES the entire file content. The file must already exist. Path must be vault-relative with file extension. Use read_note() first to get current content if you want to make partial changes.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -91,6 +95,10 @@ export class ToolRegistry {
 						content: {
 							type: "string",
 							description: "The complete new content that will replace the entire file. To make partial changes, read the file first, modify the content, then update."
+						},
+						validateLinks: {
+							type: "boolean",
+							description: "If true (default), automatically validate all wikilinks and embeds in the note, returning detailed broken link information. If false, skip link validation for better performance. Link validation checks [[wikilinks]], [[note#heading]] links, and ![[embeds]]. Default: true"
 						}
 					},
 					required: ["path", "content"]
@@ -151,7 +159,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "update_sections",
-				description: "Update specific sections of a note by line range. Reduces race conditions by avoiding full file overwrites. Returns structured JSON with success status, path, versionId, modified timestamp, and count of sections updated. Supports multiple edits in a single operation, applied from bottom to top to preserve line numbers. Includes concurrency control via ifMatch parameter. Use this for surgical edits to specific parts of large notes.",
+				description: "Update specific sections of a note by line range. Reduces race conditions by avoiding full file overwrites. Returns structured JSON with success status, path, versionId, modified timestamp, count of sections updated, word count for the entire note (excluding frontmatter and Obsidian comments), and link validation results for the entire note. Automatically validates all wikilinks, heading links, and embeds in the complete note after edits, categorizing them as valid, broken notes, or broken headings. Supports multiple edits in a single operation, applied from bottom to top to preserve line numbers. Includes concurrency control via ifMatch parameter. Use this for surgical edits to specific parts of large notes with automatic content analysis.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -175,6 +183,10 @@ export class ToolRegistry {
 						ifMatch: {
 							type: "string",
 							description: "Optional ETag/versionId for concurrency control. If provided, update only proceeds if file hasn't been modified. Get versionId from read operations. Prevents conflicting edits in concurrent scenarios."
+						},
+						validateLinks: {
+							type: "boolean",
+							description: "If true (default), automatically validate all wikilinks and embeds in the entire note after applying section edits, returning detailed broken link information. If false, skip link validation for better performance. Link validation checks [[wikilinks]], [[note#heading]] links, and ![[embeds]]. Default: true"
 						}
 					},
 					required: ["path", "edits"]
@@ -475,14 +487,19 @@ export class ToolRegistry {
 					break;
 				case "create_note":
 					result = await this.noteTools.createNote(
-						args.path, 
-						args.content, 
+						args.path,
+						args.content,
 						args.createParents ?? false,
-						args.onConflict ?? 'error'
+						args.onConflict ?? 'error',
+						args.validateLinks ?? true
 					);
 					break;
 				case "update_note":
-					result = await this.noteTools.updateNote(args.path, args.content);
+					result = await this.noteTools.updateNote(
+						args.path,
+						args.content,
+						args.validateLinks ?? true
+					);
 					break;
 				case "update_frontmatter":
 					result = await this.noteTools.updateFrontmatter(
@@ -496,7 +513,8 @@ export class ToolRegistry {
 					result = await this.noteTools.updateSections(
 						args.path,
 						args.edits,
-						args.ifMatch
+						args.ifMatch,
+						args.validateLinks ?? true
 					);
 					break;
 				case "rename_file":

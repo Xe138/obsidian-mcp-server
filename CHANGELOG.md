@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Word Count**: `create_note`, `update_note`, and `update_sections` now automatically return word count for the note content
+  - Excludes YAML frontmatter and Obsidian comments (`%% ... %%`) from word count
+  - Includes all other content (code blocks, inline code, headings, lists, etc.)
+- **Link Validation**: `create_note`, `update_note`, and `update_sections` now automatically validate all wikilinks and embeds
+  - Validates basic wikilinks (`[[Note]]`), heading links (`[[Note#Heading]]`), and embeds (`![[file.ext]]`)
+  - Categorizes links as: valid, broken notes (note doesn't exist), or broken headings (note exists but heading missing)
+  - Returns detailed broken link information including line number and context snippet
+  - Provides human-readable summary (e.g., "15 links: 12 valid, 2 broken notes, 1 broken heading")
+  - Can be disabled via `validateLinks: false` parameter for performance-critical operations
+
+### Changed
+- `create_note`, `update_note`, and `update_sections` response format now includes `wordCount` and optional `linkValidation` fields
+- `updateNote` now returns structured JSON response instead of simple success message (includes success, path, versionId, modified, wordCount, linkValidation)
+
+---
+
 ## [1.0.1] - 2025-10-28
 
 ### Fixed

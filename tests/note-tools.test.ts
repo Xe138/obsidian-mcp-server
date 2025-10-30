@@ -1,5 +1,5 @@
 import { NoteTools } from '../src/tools/note-tools';
-import { createMockVaultAdapter, createMockFileManagerAdapter, createMockTFile, createMockTFolder } from './__mocks__/adapters';
+import { createMockVaultAdapter, createMockFileManagerAdapter, createMockMetadataCacheAdapter, createMockTFile, createMockTFolder } from './__mocks__/adapters';
 import { App, Vault, TFile, TFolder } from 'obsidian';
 
 // Mock PathUtils since NoteTools uses it extensively
@@ -25,13 +25,15 @@ describe('NoteTools', () => {
 	let noteTools: NoteTools;
 	let mockVault: ReturnType<typeof createMockVaultAdapter>;
 	let mockFileManager: ReturnType<typeof createMockFileManagerAdapter>;
+	let mockMetadata: ReturnType<typeof createMockMetadataCacheAdapter>;
 	let mockApp: App;
 
 	beforeEach(() => {
 		mockVault = createMockVaultAdapter();
 		mockFileManager = createMockFileManagerAdapter();
+		mockMetadata = createMockMetadataCacheAdapter();
 		mockApp = new App();
-		noteTools = new NoteTools(mockVault, mockFileManager, mockApp);
+		noteTools = new NoteTools(mockVault, mockFileManager, mockMetadata, mockApp);
 
 		// Reset all mocks
 		jest.clearAllMocks();
@@ -273,7 +275,10 @@ describe('NoteTools', () => {
 
 			expect(result.isError).toBeUndefined();
 			expect(mockVault.modify).toHaveBeenCalledWith(mockFile, newContent);
-			expect(result.content[0].text).toContain('updated successfully');
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.success).toBe(true);
+			expect(parsed.path).toBe('test.md');
+			expect(parsed.wordCount).toBeDefined();
 		});
 
 		it('should return error if file not found', async () => {
@@ -1015,6 +1020,200 @@ Some text
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('empty');
+		});
+	});
+
+	describe('Word Count and Link Validation', () => {
+		beforeEach(() => {
+			// Setup default mocks for all word count/link validation tests
+			(PathUtils.fileExists as jest.Mock).mockReturnValue(false);
+			(PathUtils.folderExists as jest.Mock).mockReturnValue(false);
+			(PathUtils.getParentPath as jest.Mock).mockReturnValue('');
+			(PathUtils.resolveFile as jest.Mock).mockImplementation((app: any, path: string) => {
+				// Return null for non-existent files
+				return null;
+			});
+		});
+
+		describe('createNote with word count and link validation', () => {
+			it('should return word count when creating a note', async () => {
+				const content = 'This is a test note with some words.';
+				const mockFile = createMockTFile('test-note.md');
+
+				mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+				const result = await noteTools.createNote('test-note.md', content);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBe(8);
+			});
+
+			it('should return link validation structure when creating a note', async () => {
+				const content = 'This note has some [[links]].';
+				const mockFile = createMockTFile('test-note.md');
+
+				mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+				const result = await noteTools.createNote('test-note.md', content);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.linkValidation).toBeDefined();
+				expect(parsed.linkValidation).toHaveProperty('valid');
+				expect(parsed.linkValidation).toHaveProperty('brokenNotes');
+				expect(parsed.linkValidation).toHaveProperty('brokenHeadings');
+				expect(parsed.linkValidation).toHaveProperty('summary');
+			});
+
+			it('should skip link validation when validateLinks is false', async () => {
+				const content = 'This note links to [[Some Note]].';
+				const mockFile = createMockTFile('test-note.md');
+
+				mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+				const result = await noteTools.createNote('test-note.md', content, false, 'error', false);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBeDefined();
+				expect(parsed.linkValidation).toBeUndefined();
+			});
+		});
+
+		describe('updateNote with word count and link validation', () => {
+			it('should return word count when updating a note', async () => {
+				const mockFile = createMockTFile('update-test.md');
+				const newContent = 'This is updated content with several more words.';
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Old content');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateNote('update-test.md', newContent);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBe(8);
+			});
+
+			it('should return link validation structure when updating a note', async () => {
+				const mockFile = createMockTFile('update-test.md');
+				const newContent = 'Updated with [[Referenced]] link.';
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Old content');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateNote('update-test.md', newContent);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.linkValidation).toBeDefined();
+				expect(parsed.linkValidation).toHaveProperty('valid');
+				expect(parsed.linkValidation).toHaveProperty('brokenNotes');
+				expect(parsed.linkValidation).toHaveProperty('brokenHeadings');
+			});
+
+			it('should skip link validation when validateLinks is false', async () => {
+				const mockFile = createMockTFile('update-test.md');
+				const newContent = 'Updated content with [[Some Link]].';
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Old content');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateNote('update-test.md', newContent, false);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBeDefined();
+				expect(parsed.linkValidation).toBeUndefined();
+			});
+		});
+
+		describe('updateSections with word count and link validation', () => {
+			it('should return word count for entire note after section update', async () => {
+				const mockFile = createMockTFile('sections-test.md');
+				const edits = [{ startLine: 2, endLine: 2, content: 'Updated line two with more words' }];
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateSections('sections-test.md', edits);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBeGreaterThan(0);
+				expect(parsed.sectionsUpdated).toBe(1);
+			});
+
+			it('should return link validation structure for entire note after section update', async () => {
+				const mockFile = createMockTFile('sections-test.md');
+				const edits = [{ startLine: 2, endLine: 2, content: 'See [[Link Target]] here' }];
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateSections('sections-test.md', edits);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.linkValidation).toBeDefined();
+				expect(parsed.linkValidation).toHaveProperty('valid');
+				expect(parsed.linkValidation).toHaveProperty('brokenNotes');
+			});
+
+			it('should skip link validation when validateLinks is false', async () => {
+				const mockFile = createMockTFile('sections-test.md');
+				const edits = [{ startLine: 1, endLine: 1, content: 'Updated with [[Link]]' }];
+
+				(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
+				mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+				const result = await noteTools.updateSections('sections-test.md', edits, undefined, false);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBeDefined();
+				expect(parsed.linkValidation).toBeUndefined();
+			});
+		});
+
+		describe('Word count with frontmatter and comments', () => {
+			it('should exclude frontmatter from word count', async () => {
+				const content = `---
+title: Test Note
+tags: [test]
+---
+
+This is the actual content with words.`;
+				const mockFile = createMockTFile('test-note.md');
+
+				mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+				const result = await noteTools.createNote('test-note.md', content);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBe(7); // "This is the actual content with words."
+			});
+
+			it('should exclude Obsidian comments from word count', async () => {
+				const content = `This is visible. %% This is hidden %% More visible.`;
+				const mockFile = createMockTFile('test-note.md');
+
+				mockVault.create = jest.fn().mockResolvedValue(mockFile);
+
+				const result = await noteTools.createNote('test-note.md', content);
+
+				expect(result.isError).toBeFalsy();
+				const parsed = JSON.parse(result.content[0].text);
+				expect(parsed.wordCount).toBe(6); // "This is visible. More visible."
+			});
 		});
 	});
 });

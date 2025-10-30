@@ -42,6 +42,46 @@ export interface UnresolvedLink {
 }
 
 /**
+ * Broken link information (note doesn't exist)
+ */
+export interface BrokenNoteLink {
+	/** Original link text */
+	link: string;
+	/** Line number where the link appears */
+	line: number;
+	/** Context snippet around the link */
+	context: string;
+}
+
+/**
+ * Broken heading link information (note exists but heading doesn't)
+ */
+export interface BrokenHeadingLink {
+	/** Original link text */
+	link: string;
+	/** Line number where the link appears */
+	line: number;
+	/** Context snippet around the link */
+	context: string;
+	/** The note path that exists */
+	note: string;
+}
+
+/**
+ * Link validation result
+ */
+export interface LinkValidationResult {
+	/** Array of valid links */
+	valid: string[];
+	/** Array of broken note links (note doesn't exist) */
+	brokenNotes: BrokenNoteLink[];
+	/** Array of broken heading links (note exists but heading doesn't) */
+	brokenHeadings: BrokenHeadingLink[];
+	/** Human-readable summary */
+	summary: string;
+}
+
+/**
  * Backlink occurrence in a file
  */
 export interface BacklinkOccurrence {
@@ -393,5 +433,109 @@ export class LinkUtils {
 		}
 
 		return { resolvedLinks, unresolvedLinks };
+	}
+
+	/**
+	 * Validate all links in content (wikilinks, heading links, and embeds)
+	 * Returns categorized results: valid, broken notes, and broken headings
+	 *
+	 * @param vault Vault adapter for file operations
+	 * @param metadata Metadata cache adapter for link resolution
+	 * @param content File content to validate
+	 * @param sourcePath Path of the file containing the links
+	 * @returns Structured validation result with categorized links
+	 */
+	static async validateLinks(
+		vault: IVaultAdapter,
+		metadata: IMetadataCacheAdapter,
+		content: string,
+		sourcePath: string
+	): Promise<LinkValidationResult> {
+		const valid: string[] = [];
+		const brokenNotes: BrokenNoteLink[] = [];
+		const brokenHeadings: BrokenHeadingLink[] = [];
+
+		// Parse all wikilinks from content (includes embeds which start with !)
+		const wikilinks = this.parseWikilinks(content);
+		const lines = content.split('\n');
+
+		for (const link of wikilinks) {
+			// Check if this is a heading link
+			const hasHeading = link.target.includes('#');
+
+			if (hasHeading) {
+				// Split note path and heading
+				const [notePath, ...headingParts] = link.target.split('#');
+				const heading = headingParts.join('#'); // Rejoin in case heading has # in it
+
+				// Try to resolve the note
+				const resolvedFile = this.resolveLink(vault, metadata, sourcePath, notePath || sourcePath);
+
+				if (!resolvedFile) {
+					// Note doesn't exist
+					const context = this.extractSnippet(lines, link.line - 1, 100);
+					brokenNotes.push({
+						link: link.raw,
+						line: link.line,
+						context
+					});
+				} else {
+					// Note exists, check if heading exists
+					const fileCache = metadata.getFileCache(resolvedFile);
+					const headings = fileCache?.headings || [];
+
+					// Normalize heading for comparison (remove # and trim)
+					const normalizedHeading = heading.trim().toLowerCase();
+					const headingExists = headings.some(h =>
+						h.heading.trim().toLowerCase() === normalizedHeading
+					);
+
+					if (headingExists) {
+						// Both note and heading exist
+						valid.push(link.raw);
+					} else {
+						// Note exists but heading doesn't
+						const context = this.extractSnippet(lines, link.line - 1, 100);
+						brokenHeadings.push({
+							link: link.raw,
+							line: link.line,
+							context,
+							note: resolvedFile.path
+						});
+					}
+				}
+			} else {
+				// Regular link or embed (no heading)
+				const resolvedFile = this.resolveLink(vault, metadata, sourcePath, link.target);
+
+				if (resolvedFile) {
+					valid.push(link.raw);
+				} else {
+					const context = this.extractSnippet(lines, link.line - 1, 100);
+					brokenNotes.push({
+						link: link.raw,
+						line: link.line,
+						context
+					});
+				}
+			}
+		}
+
+		// Generate summary
+		const totalLinks = valid.length + brokenNotes.length + brokenHeadings.length;
+		let summary = `${totalLinks} links: ${valid.length} valid`;
+		if (brokenNotes.length > 0) {
+			summary += `, ${brokenNotes.length} broken note${brokenNotes.length === 1 ? '' : 's'}`;
+		}
+		if (brokenHeadings.length > 0) {
+			summary += `, ${brokenHeadings.length} broken heading${brokenHeadings.length === 1 ? '' : 's'}`;
+		}
+
+		return {
+			valid,
+			brokenNotes,
+			brokenHeadings,
+			summary
+		};
 	}
 }

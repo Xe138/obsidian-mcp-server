@@ -1,6 +1,6 @@
 import { App } from 'obsidian';
 import { NoteTools } from '../src/tools/note-tools';
-import { createMockVaultAdapter, createMockFileManagerAdapter, createMockTFile, createMockTFolder } from './__mocks__/adapters';
+import { createMockVaultAdapter, createMockFileManagerAdapter, createMockMetadataCacheAdapter, createMockTFile, createMockTFolder } from './__mocks__/adapters';
 
 // Mock Obsidian API
 jest.mock('obsidian');
@@ -9,11 +9,13 @@ describe('Enhanced Parent Folder Detection', () => {
 	let noteTools: NoteTools;
 	let mockVault: ReturnType<typeof createMockVaultAdapter>;
 	let mockFileManager: ReturnType<typeof createMockFileManagerAdapter>;
+	let mockMetadata: ReturnType<typeof createMockMetadataCacheAdapter>;
 	let mockApp: App;
 
 	beforeEach(() => {
 		mockVault = createMockVaultAdapter();
 		mockFileManager = createMockFileManagerAdapter();
+		mockMetadata = createMockMetadataCacheAdapter();
 
 		// Create a minimal mock App that supports PathUtils
 		// Use a getter to ensure it always uses the current mock
@@ -25,7 +27,7 @@ describe('Enhanced Parent Folder Detection', () => {
 			}
 		} as any;
 
-		noteTools = new NoteTools(mockVault, mockFileManager, mockApp);
+		noteTools = new NoteTools(mockVault, mockFileManager, mockMetadata, mockApp);
 	});
 
 	describe('Explicit parent folder detection', () => {

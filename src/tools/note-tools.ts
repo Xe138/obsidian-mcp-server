@@ -16,12 +16,15 @@ import { ErrorMessages } from '../utils/error-messages';
 import { FrontmatterUtils } from '../utils/frontmatter-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { VersionUtils } from '../utils/version-utils';
-import { IVaultAdapter, IFileManagerAdapter } from '../adapters/interfaces';
+import { ContentUtils } from '../utils/content-utils';
+import { LinkUtils } from '../utils/link-utils';
+import { IVaultAdapter, IFileManagerAdapter, IMetadataCacheAdapter } from '../adapters/interfaces';
 
 export class NoteTools {
 	constructor(
 		private vault: IVaultAdapter,
 		private fileManager: IFileManagerAdapter,
+		private metadata: IMetadataCacheAdapter,
 		private app: App  // Keep temporarily for methods not yet migrated
 	) {}
 
@@ -119,10 +122,11 @@ export class NoteTools {
 	}
 
 	async createNote(
-		path: string, 
-		content: string, 
+		path: string,
+		content: string,
 		createParents: boolean = false,
-		onConflict: ConflictStrategy = 'error'
+		onConflict: ConflictStrategy = 'error',
+		validateLinks: boolean = true
 	): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
@@ -213,7 +217,7 @@ export class NoteTools {
 		// Proceed with file creation
 		try {
 			const file = await this.vault.create(finalPath, content);
-			
+
 			const result: CreateNoteResult = {
 				success: true,
 				path: file.path,
@@ -222,6 +226,19 @@ export class NoteTools {
 				renamed: wasRenamed,
 				originalPath: originalPath
 			};
+
+			// Add word count
+			result.wordCount = ContentUtils.countWords(content);
+
+			// Add link validation if requested
+			if (validateLinks) {
+				result.linkValidation = await LinkUtils.validateLinks(
+					this.vault,
+					this.metadata,
+					content,
+					file.path
+				);
+			}
 
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
@@ -271,7 +288,7 @@ export class NoteTools {
 		}
 	}
 
-	async updateNote(path: string, content: string): Promise<CallToolResult> {
+	async updateNote(path: string, content: string, validateLinks: boolean = true): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
 			return {
@@ -329,8 +346,30 @@ export class NoteTools {
 			}
 
 			await this.vault.modify(file, content);
+
+			// Build response with word count and link validation
+			const result: any = {
+				success: true,
+				path: file.path,
+				versionId: VersionUtils.generateVersionId(file),
+				modified: file.stat.mtime
+			};
+
+			// Add word count
+			result.wordCount = ContentUtils.countWords(content);
+
+			// Add link validation if requested
+			if (validateLinks) {
+				result.linkValidation = await LinkUtils.validateLinks(
+					this.vault,
+					this.metadata,
+					content,
+					file.path
+				);
+			}
+
 			return {
-				content: [{ type: "text", text: `Note updated successfully: ${file.path}` }]
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
 			};
 		} catch (error) {
 			return {
@@ -813,7 +852,8 @@ export class NoteTools {
 	async updateSections(
 		path: string,
 		edits: SectionEdit[],
-		ifMatch?: string
+		ifMatch?: string,
+		validateLinks: boolean = true
 	): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
@@ -916,6 +956,19 @@ export class NoteTools {
 				modified: file.stat.mtime,
 				sectionsUpdated: edits.length
 			};
+
+			// Add word count
+			result.wordCount = ContentUtils.countWords(newContent);
+
+			// Add link validation if requested
+			if (validateLinks) {
+				result.linkValidation = await LinkUtils.validateLinks(
+					this.vault,
+					this.metadata,
+					newContent,
+					file.path
+				);
+			}
 
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
