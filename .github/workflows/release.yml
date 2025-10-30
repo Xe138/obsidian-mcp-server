@@ -27,15 +27,33 @@ jobs:
           echo "package.json: $PKG_VERSION"
           echo "manifest.json: $MANIFEST_VERSION"
 
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ] || [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
-            echo "❌ Version mismatch detected!"
-            echo "Git tag: $TAG_VERSION"
-            echo "package.json: $PKG_VERSION"
-            echo "manifest.json: $MANIFEST_VERSION"
-            exit 1
-          fi
+          # Check if this is a prerelease tag (alpha, beta, rc)
+          if [[ "$TAG_VERSION" =~ -alpha\. ]] || [[ "$TAG_VERSION" =~ -beta\. ]] || [[ "$TAG_VERSION" =~ -rc\. ]]; then
+            # For prerelease tags, strip the prerelease suffix and compare base version
+            BASE_VERSION="${TAG_VERSION%%-*}"
+            echo "Prerelease tag detected. Base version: $BASE_VERSION"
 
-          echo "✅ All versions match: $TAG_VERSION"
+            if [ "$BASE_VERSION" != "$PKG_VERSION" ] || [ "$BASE_VERSION" != "$MANIFEST_VERSION" ]; then
+              echo "❌ Base version mismatch detected!"
+              echo "Git tag base: $BASE_VERSION (from $TAG_VERSION)"
+              echo "package.json: $PKG_VERSION"
+              echo "manifest.json: $MANIFEST_VERSION"
+              exit 1
+            fi
+
+            echo "✅ Base versions match: $BASE_VERSION (prerelease: $TAG_VERSION)"
+          else
+            # For production releases, require exact match
+            if [ "$TAG_VERSION" != "$PKG_VERSION" ] || [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+              echo "❌ Version mismatch detected!"
+              echo "Git tag: $TAG_VERSION"
+              echo "package.json: $PKG_VERSION"
+              echo "manifest.json: $MANIFEST_VERSION"
+              exit 1
+            fi
+
+            echo "✅ All versions match: $TAG_VERSION"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
