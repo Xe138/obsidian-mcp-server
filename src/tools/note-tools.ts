@@ -82,6 +82,17 @@ export class NoteTools {
 
 			// If no special options, return simple content
 			if (!parseFrontmatter) {
+				// Compute word count when returning content
+				if (withContent) {
+					const wordCount = ContentUtils.countWords(content);
+					const result = {
+						content,
+						wordCount
+					};
+					return {
+						content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+					};
+				}
 				return {
 					content: [{ type: "text", text: content }]
 				};
@@ -108,6 +119,11 @@ export class NoteTools {
 			/* istanbul ignore next */
 			if (withContent && extracted.hasFrontmatter) {
 				result.contentWithoutFrontmatter = extracted.contentWithoutFrontmatter;
+			}
+
+			// Add word count when content is included
+			if (withContent) {
+				result.wordCount = ContentUtils.countWords(content);
 			}
 
 			return {

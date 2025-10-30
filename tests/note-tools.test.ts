@@ -18,6 +18,18 @@ jest.mock('../src/utils/path-utils', () => ({
 	}
 }));
 
+// Mock LinkUtils for link validation tests
+jest.mock('../src/utils/link-utils', () => ({
+	LinkUtils: {
+		validateLinks: jest.fn().mockResolvedValue({
+			valid: [],
+			brokenNotes: [],
+			brokenHeadings: [],
+			summary: 'No links found'
+		})
+	}
+}));
+
 // Import the mocked PathUtils
 import { PathUtils } from '../src/utils/path-utils';
 
@@ -50,7 +62,10 @@ describe('NoteTools', () => {
 			const result = await noteTools.readNote('test.md');
 
 			expect(result.isError).toBeUndefined();
-			expect(result.content[0].text).toBe(content);
+			// Now returns JSON with content and wordCount
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe(content);
+			expect(parsed.wordCount).toBe(7); // Test Note This is test content
 			expect(mockVault.read).toHaveBeenCalledWith(mockFile);
 		});
 
@@ -100,6 +115,93 @@ describe('NoteTools', () => {
 			expect(parsed.path).toBe('test.md');
 			// frontmatter field is the raw YAML string
 			expect(parsed.frontmatter).toBeDefined();
+		});
+
+		it('should include word count when withContent is true', async () => {
+			const mockFile = createMockTFile('test.md');
+			const content = '# Test Note\n\nThis is a test note with some words.';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { withContent: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe(content);
+			expect(parsed.wordCount).toBe(11); // Test Note This is a test note with some words
+		});
+
+		it('should include word count when parseFrontmatter is true', async () => {
+			const mockFile = createMockTFile('test.md');
+			const content = '---\ntitle: Test\n---\n\nThis is content.';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { parseFrontmatter: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.wordCount).toBe(3); // "This is content."
+		});
+
+		it('should exclude frontmatter from word count', async () => {
+			const mockFile = createMockTFile('test.md');
+			const content = '---\ntitle: Test Note\ntags: [test, example]\n---\n\nActual content words.';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { parseFrontmatter: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.wordCount).toBe(3); // "Actual content words."
+		});
+
+		it('should exclude Obsidian comments from word count', async () => {
+			const mockFile = createMockTFile('test.md');
+			const content = 'Visible text %% Hidden comment %% more visible.';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { withContent: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.wordCount).toBe(4); // "Visible text more visible"
+		});
+
+		it('should return 0 word count for empty file', async () => {
+			const mockFile = createMockTFile('empty.md');
+			const content = '';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('empty.md', { withContent: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.wordCount).toBe(0);
+		});
+
+		it('should return JSON format even with default options', async () => {
+			const mockFile = createMockTFile('test.md');
+			const content = '# Test Note\n\nContent here.';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md');
+
+			expect(result.isError).toBeUndefined();
+			// Now returns JSON even with default options
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe(content);
+			expect(parsed.wordCount).toBe(5); // Test Note Content here
 		});
 	});
 

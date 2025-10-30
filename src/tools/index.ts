@@ -27,7 +27,7 @@ export class ToolRegistry {
 		return [
 			{
 				name: "read_note",
-				description: "Read the content of a file from the Obsidian vault with optional frontmatter parsing. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list() first if you're unsure of the exact path. This only works on files, not folders. By default returns raw content. Set parseFrontmatter to true to get structured data with separated frontmatter and content.",
+				description: "Read the content of a file from the Obsidian vault with optional frontmatter parsing. Returns word count (excluding frontmatter and Obsidian comments) when content is included in the response. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list() first if you're unsure of the exact path. This only works on files, not folders. By default returns raw content with word count. Set parseFrontmatter to true to get structured data with separated frontmatter, content, and word count.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -289,7 +289,7 @@ export class ToolRegistry {
 			},
 			{
 				name: "list",
-				description: "List files and/or directories with advanced filtering, recursion, and pagination. Returns structured JSON with file/directory metadata and optional frontmatter summaries. Supports glob patterns for includes/excludes, recursive traversal, type filtering, and cursor-based pagination. Use this to explore vault structure with fine-grained control.",
+				description: "List files and/or directories with advanced filtering, recursion, and pagination. Returns structured JSON with file/directory metadata and optional frontmatter summaries. Optional: includeWordCount (boolean) - If true, read each file's content and compute word count (excluding frontmatter and Obsidian comments). WARNING: This can be very slow for large directories or recursive listings, as it reads every file. Files that cannot be read are skipped (best effort). Only computed for files, not directories. Supports glob patterns for includes/excludes, recursive traversal, type filtering, and cursor-based pagination. Use this to explore vault structure with fine-grained control.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -327,19 +327,27 @@ export class ToolRegistry {
 						withFrontmatterSummary: {
 							type: "boolean",
 							description: "If true, include parsed frontmatter (title, tags, aliases) for markdown files without reading full content. Default: false."
+						},
+						includeWordCount: {
+							type: "boolean",
+							description: "If true, read each file's content and compute word count. WARNING: Can be very slow for large directories or recursive listings. Only applies to files. Default: false"
 						}
 					}
 				}
 			},
 			{
 				name: "stat",
-				description: "Get detailed metadata for a file or folder at a specific path. Returns existence status, kind (file or directory), and full metadata including size, dates, etc. Use this to check if a path exists and get its properties. More detailed than exists() but slightly slower. Returns structured JSON with path, exists boolean, kind, and metadata object.",
+				description: "Get detailed metadata for a file or folder at a specific path. Returns existence status, kind (file or directory), and full metadata including size, dates, etc. Optional: includeWordCount (boolean) - If true, read file content and compute word count (excluding frontmatter and Obsidian comments). WARNING: This requires reading the entire file and is significantly slower than metadata-only stat. Only works for files, not directories. Use this to check if a path exists and get its properties. More detailed than exists() but slightly slower. Returns structured JSON with path, exists boolean, kind, and metadata object.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						path: {
 							type: "string",
 							description: "Vault-relative path to check (e.g., 'folder/note.md' or 'projects'). Can be a file or folder. Paths are case-sensitive on macOS/Linux. Do not use leading or trailing slashes."
+						},
+						includeWordCount: {
+							type: "boolean",
+							description: "If true, read file content and compute word count. WARNING: Significantly slower than metadata-only stat. Only applies to files. Default: false"
 						}
 					},
 					required: ["path"]
@@ -561,11 +569,12 @@ export class ToolRegistry {
 						only: args.only,
 						limit: args.limit,
 						cursor: args.cursor,
-						withFrontmatterSummary: args.withFrontmatterSummary
+						withFrontmatterSummary: args.withFrontmatterSummary,
+						includeWordCount: args.includeWordCount
 					});
 					break;
 				case "stat":
-					result = await this.vaultTools.stat(args.path);
+					result = await this.vaultTools.stat(args.path, args.includeWordCount);
 					break;
 				case "exists":
 					result = await this.vaultTools.exists(args.path);

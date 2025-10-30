@@ -6,6 +6,7 @@ import { GlobUtils } from '../utils/glob-utils';
 import { SearchUtils } from '../utils/search-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { LinkUtils } from '../utils/link-utils';
+import { ContentUtils } from '../utils/content-utils';
 import { IVaultAdapter, IMetadataCacheAdapter } from '../adapters/interfaces';
 
 export class VaultTools {
@@ -145,6 +146,7 @@ export class VaultTools {
 		limit?: number;
 		cursor?: string;
 		withFrontmatterSummary?: boolean;
+		includeWordCount?: boolean;
 	}): Promise<CallToolResult> {
 		const {
 			path,
@@ -154,7 +156,8 @@ export class VaultTools {
 			only = 'any',
 			limit,
 			cursor,
-			withFrontmatterSummary = false
+			withFrontmatterSummary = false,
+			includeWordCount = false
 		} = options;
 
 		let items: Array<FileMetadataWithFrontmatter | DirectoryMetadata> = [];
@@ -201,7 +204,7 @@ export class VaultTools {
 		}
 
 		// Collect items based on recursive flag
-		await this.collectItems(targetFolder, items, recursive, includes, excludes, only, withFrontmatterSummary);
+		await this.collectItems(targetFolder, items, recursive, includes, excludes, only, withFrontmatterSummary, includeWordCount);
 
 		// Sort: directories first, then files, alphabetically within each group
 		items.sort((a, b) => {
@@ -259,7 +262,8 @@ export class VaultTools {
 		includes?: string[],
 		excludes?: string[],
 		only?: 'files' | 'directories' | 'any',
-		withFrontmatterSummary?: boolean
+		withFrontmatterSummary?: boolean,
+		includeWordCount?: boolean
 	): Promise<void> {
 		for (const item of folder.children) {
 			// Skip the vault root itself
@@ -276,6 +280,18 @@ export class VaultTools {
 			if (item instanceof TFile) {
 				if (only !== 'directories') {
 					const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary || false);
+
+					// Optionally include word count (best effort)
+					if (includeWordCount) {
+						try {
+							const content = await this.vault.read(item);
+							fileMetadata.wordCount = ContentUtils.countWords(content);
+						} catch (error) {
+							// Skip word count if file can't be read (binary file, etc.)
+							// wordCount field simply omitted for this file
+						}
+					}
+
 					items.push(fileMetadata);
 				}
 			} else if (item instanceof TFolder) {
@@ -285,7 +301,7 @@ export class VaultTools {
 
 				// Recursively collect from subfolders if needed
 				if (recursive) {
-					await this.collectItems(item, items, recursive, includes, excludes, only, withFrontmatterSummary);
+					await this.collectItems(item, items, recursive, includes, excludes, only, withFrontmatterSummary, includeWordCount);
 				}
 			}
 		}
@@ -386,7 +402,7 @@ export class VaultTools {
 	}
 
 	// Phase 3: Discovery Endpoints
-	async stat(path: string): Promise<CallToolResult> {
+	async stat(path: string, includeWordCount: boolean = false): Promise<CallToolResult> {
 		// Validate path
 		if (!PathUtils.isValidVaultPath(path)) {
 			return {
@@ -417,11 +433,23 @@ export class VaultTools {
 
 		// Check if it's a file
 		if (item instanceof TFile) {
+			const metadata = this.createFileMetadata(item);
+
+			// Optionally include word count
+			if (includeWordCount) {
+				try {
+					const content = await this.vault.read(item);
+					metadata.wordCount = ContentUtils.countWords(content);
+				} catch (error) {
+					// Skip word count if file can't be read (binary file, etc.)
+				}
+			}
+
 			const result: StatResult = {
 				path: normalizedPath,
 				exists: true,
 				kind: "file",
-				metadata: this.createFileMetadata(item)
+				metadata
 			};
 			return {
 				content: [{

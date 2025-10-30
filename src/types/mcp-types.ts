@@ -73,6 +73,7 @@ export interface FileMetadata {
 	size: number;
 	modified: number;
 	created: number;
+	wordCount?: number;
 }
 
 export interface DirectoryMetadata {
@@ -181,6 +182,7 @@ export interface ParsedNote {
 	parsedFrontmatter?: Record<string, any>;
 	content: string;
 	contentWithoutFrontmatter?: string;
+	wordCount?: number;
 }
 
 /**

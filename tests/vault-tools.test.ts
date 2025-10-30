@@ -195,6 +195,97 @@ describe('VaultTools', () => {
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('Invalid path');
 		});
+
+		it('should include word count when includeWordCount is true', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 500
+			});
+			const content = '# Test Note\n\nThis is a test note with some words.';
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await vaultTools.stat('test.md', true);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.exists).toBe(true);
+			expect(parsed.kind).toBe('file');
+			expect(parsed.metadata.wordCount).toBe(11); // Test Note This is a test note with some words
+			expect(mockVault.read).toHaveBeenCalledWith(mockFile);
+		});
+
+		it('should not include word count when includeWordCount is false', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 500
+			});
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn();
+
+			const result = await vaultTools.stat('test.md', false);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.metadata.wordCount).toBeUndefined();
+			expect(mockVault.read).not.toHaveBeenCalled();
+		});
+
+		it('should exclude frontmatter from word count in stat', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 500
+			});
+			const content = '---\ntitle: Test Note\ntags: [test]\n---\n\nActual content words.';
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await vaultTools.stat('test.md', true);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.metadata.wordCount).toBe(3); // "Actual content words."
+		});
+
+		it('should handle read errors when computing word count', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 500
+			});
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockRejectedValue(new Error('Cannot read file'));
+
+			const result = await vaultTools.stat('test.md', true);
+
+			// Should still succeed but without word count
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.exists).toBe(true);
+			expect(parsed.metadata.wordCount).toBeUndefined();
+		});
+
+		it('should not include word count for directories', async () => {
+			const mockFolder = createMockTFolder('folder1', [
+				createMockTFile('folder1/file1.md')
+			]);
+
+			mockVault.getAbstractFileByPath = jest.fn().mockReturnValue(mockFolder);
+
+			const result = await vaultTools.stat('folder1', true);
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.kind).toBe('directory');
+			expect(parsed.metadata.wordCount).toBeUndefined();
+		});
 	});
 
 	describe('exists', () => {
@@ -485,6 +576,112 @@ describe('VaultTools', () => {
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.items.length).toBe(1);
 			expect(parsed.items[0].frontmatterSummary).toBeUndefined();
+		});
+
+		it('should include word count when includeWordCount is true', async () => {
+			const mockFile1 = createMockTFile('file1.md');
+			const mockFile2 = createMockTFile('file2.md');
+			const mockRoot = createMockTFolder('', [mockFile1, mockFile2]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn()
+				.mockResolvedValueOnce('# File One\n\nThis has five words.')
+				.mockResolvedValueOnce('# File Two\n\nThis has more than five words here.');
+
+			const result = await vaultTools.list({ includeWordCount: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(2);
+			expect(parsed.items[0].wordCount).toBe(7); // File One This has five words
+			expect(parsed.items[1].wordCount).toBe(10); // File Two This has more than five words here
+		});
+
+		it('should not include word count when includeWordCount is false', async () => {
+			const mockFile = createMockTFile('file.md');
+			const mockRoot = createMockTFolder('', [mockFile]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn();
+
+			const result = await vaultTools.list({ includeWordCount: false });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(1);
+			expect(parsed.items[0].wordCount).toBeUndefined();
+			expect(mockVault.read).not.toHaveBeenCalled();
+		});
+
+		it('should exclude frontmatter from word count in list', async () => {
+			const mockFile = createMockTFile('file.md');
+			const mockRoot = createMockTFolder('', [mockFile]);
+			const content = '---\ntitle: Test\ntags: [test]\n---\n\nActual content.';
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await vaultTools.list({ includeWordCount: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items[0].wordCount).toBe(2); // "Actual content"
+		});
+
+		it('should handle read errors gracefully when computing word count', async () => {
+			const mockFile1 = createMockTFile('file1.md');
+			const mockFile2 = createMockTFile('file2.md');
+			const mockRoot = createMockTFolder('', [mockFile1, mockFile2]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn()
+				.mockResolvedValueOnce('Content for file 1.')
+				.mockRejectedValueOnce(new Error('Cannot read file2'));
+
+			const result = await vaultTools.list({ includeWordCount: true });
+
+			// Should still succeed but skip word count for unreadable files
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(2);
+			expect(parsed.items[0].wordCount).toBe(4); // "Content for file 1"
+			expect(parsed.items[1].wordCount).toBeUndefined(); // Error, skip word count
+		});
+
+		it('should not include word count for directories', async () => {
+			const mockFile = createMockTFile('file.md');
+			const mockFolder = createMockTFolder('folder');
+			const mockRoot = createMockTFolder('', [mockFile, mockFolder]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn().mockResolvedValue('Some content.');
+
+			const result = await vaultTools.list({ includeWordCount: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(2);
+			const fileItem = parsed.items.find((item: any) => item.kind === 'file');
+			const folderItem = parsed.items.find((item: any) => item.kind === 'directory');
+			expect(fileItem.wordCount).toBe(2); // "Some content"
+			expect(folderItem.wordCount).toBeUndefined();
+		});
+
+		it('should filter files and include word count', async () => {
+			const mockFile = createMockTFile('file.md');
+			const mockFolder = createMockTFolder('folder');
+			const mockRoot = createMockTFolder('', [mockFile, mockFolder]);
+
+			mockVault.getRoot = jest.fn().mockReturnValue(mockRoot);
+			mockVault.read = jest.fn().mockResolvedValue('File content here.');
+
+			const result = await vaultTools.list({ only: 'files', includeWordCount: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.items.length).toBe(1);
+			expect(parsed.items[0].kind).toBe('file');
+			expect(parsed.items[0].wordCount).toBe(3); // "File content here"
 		});
 	});
 

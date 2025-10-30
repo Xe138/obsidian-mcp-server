@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+---
+
+## [1.1.0] - 2025-10-30
+
 ### Added
 - **Word Count**: `create_note`, `update_note`, and `update_sections` now automatically return word count for the note content
   - Excludes YAML frontmatter and Obsidian comments (`%% ... %%`) from word count
@@ -18,10 +22,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Returns detailed broken link information including line number and context snippet
   - Provides human-readable summary (e.g., "15 links: 12 valid, 2 broken notes, 1 broken heading")
   - Can be disabled via `validateLinks: false` parameter for performance-critical operations
+- **Word Count for Read Operations**: Extended word count support to read operations
+  - `read_note` now automatically includes `wordCount` when returning content (with `withContent` or `parseFrontmatter` options)
+  - `stat` supports optional `includeWordCount` parameter to compute word count (with performance warning)
+  - `list` supports optional `includeWordCount` parameter to compute word count for all files (with performance warning)
+  - All read operations use the same word counting rules as write operations (excludes frontmatter and Obsidian comments)
+  - Best-effort error handling: unreadable files are skipped in batch operations without failing the entire request
 
 ### Changed
 - `create_note`, `update_note`, and `update_sections` response format now includes `wordCount` and optional `linkValidation` fields
 - `updateNote` now returns structured JSON response instead of simple success message (includes success, path, versionId, modified, wordCount, linkValidation)
+- `read_note` response now includes `wordCount` field when returning content
+- `stat` response includes optional `wordCount` field in metadata when `includeWordCount: true`
+- `list` response includes optional `wordCount` field for each file when `includeWordCount: true`
+- Type definitions updated: `ParsedNote` and `FileMetadata` interfaces now include optional `wordCount?: number` field
 
 ---
 
