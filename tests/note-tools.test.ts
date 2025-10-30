@@ -1125,9 +1125,10 @@ Some text
 		});
 	});
 
-	describe.skip('Word Count and Link Validation', () => {
+	describe('Word Count and Link Validation', () => {
 		beforeEach(() => {
 			// Setup default mocks for all word count/link validation tests
+			(PathUtils.isValidVaultPath as jest.Mock).mockReturnValue(true);
 			(PathUtils.fileExists as jest.Mock).mockReturnValue(false);
 			(PathUtils.folderExists as jest.Mock).mockReturnValue(false);
 			(PathUtils.getParentPath as jest.Mock).mockReturnValue('');
@@ -1321,7 +1322,7 @@ This is the actual content with words.`;
 
 				expect(result.isError).toBeFalsy();
 				const parsed = JSON.parse(result.content[0].text);
-				expect(parsed.wordCount).toBe(6); // "This is visible. More visible."
+				expect(parsed.wordCount).toBe(5); // "This is visible. More visible." = 5 words
 			});
 		});
 	});
