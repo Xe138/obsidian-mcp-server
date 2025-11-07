@@ -102,7 +102,6 @@ export class MCPServer {
 		return new Promise((resolve, reject) => {
 			try {
 				this.server = this.app.listen(this.settings.port, '127.0.0.1', () => {
-					console.log(`MCP Server listening on http://127.0.0.1:${this.settings.port}/mcp`);
 					resolve();
 				});
 
@@ -126,7 +125,6 @@ export class MCPServer {
 					if (err) {
 						reject(err);
 					} else {
-						console.log('MCP Server stopped');
 						this.server = null;
 						resolve();
 					}

@@ -160,7 +160,7 @@ describe('NotificationManager', () => {
 			settings.logToConsole = true;
 			manager = new NotificationManager(app, settings);
 
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = jest.spyOn(console, 'debug').mockImplementation();
 
 			manager.showToolCall('read_note', { path: 'test.md' });
 
@@ -173,7 +173,7 @@ describe('NotificationManager', () => {
 		});
 
 		it('should not log to console when disabled', () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = jest.spyOn(console, 'debug').mockImplementation();
 
 			manager.showToolCall('read_note', { path: 'test.md' });
 

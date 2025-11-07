@@ -93,7 +93,7 @@ export class NotificationManager {
 
 		// Log to console if enabled
 		if (this.settings.logToConsole) {
-			console.log(`[MCP] Tool call: ${toolName}`, args);
+			console.debug(`[MCP] Tool call: ${toolName}`, args);
 		}
 	}
 

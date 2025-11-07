@@ -18,7 +18,6 @@ export default class MCPServerPlugin extends Plugin {
 
 		// Auto-generate API key if not set
 		if (!this.settings.apiKey || this.settings.apiKey.trim() === '') {
-			console.log('Generating new API key...');
 			this.settings.apiKey = generateApiKey();
 			await this.saveSettings();
 		}
@@ -30,7 +29,6 @@ export default class MCPServerPlugin extends Plugin {
 		}
 		const legacySettings = this.settings as LegacySettings;
 		if ('enableCORS' in legacySettings || 'allowedOrigins' in legacySettings) {
-			console.log('Migrating legacy CORS settings...');
 			delete legacySettings.enableCORS;
 			delete legacySettings.allowedOrigins;
 			await this.saveSettings();
