@@ -10,6 +10,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.1] - 2025-11-07
+
+### Fixed
+- **Type Safety**: Replaced all `any` types with properly defined TypeScript interfaces and types throughout the codebase
+  - Defined `ElectronSafeStorage` interface for Electron's safeStorage API
+  - Created `LegacySettings` interface for settings migration
+  - Defined `JSONValue`, `JSONRPCParams`, and `JSONSchemaProperty` types for JSON-RPC and MCP protocol
+  - Created `YAMLValue` and `FrontmatterValue` types for frontmatter handling
+  - Updated middleware to use proper Express types (`NextFunction`, `JSONRPCResponse`)
+- **Console Logging**: Removed all `console.log` statements to comply with Obsidian plugin submission requirements
+  - Replaced user-controlled logging with `console.debug` for optional tool call logging
+  - Only `console.warn`, `console.error`, and `console.debug` methods remain
+- **Promise Handling**: Fixed async callback handling in DOM event listeners
+  - Wrapped async event handlers with void IIFE pattern to properly handle promises in void contexts
+  - Fixed 7 event listeners in settings UI and notification history
+- **Import Statements**: Improved `require()` usage with proper TypeScript typing and ESLint directives
+  - Added type assertions for Electron and Node.js crypto modules
+  - Included justification comments for necessary `require()` usage
+- **Settings UI**: Replaced direct DOM `createElement()` calls with Obsidian's `Setting.setHeading()` API
+  - Updated all heading elements in settings tab to use official API
+- **Text Formatting**: Applied sentence case to all user-facing text per Obsidian UI guidelines
+  - Updated command names, setting labels, button text, and notice messages
+- **Code Quality**: Various cleanup improvements
+  - Removed unused `vault.delete()` method in favor of `trashFile()`
+  - Fixed regex character class format from `\x00-\x1F` to `\u0000-\u001F` for clarity
+  - Verified no unused imports, variables, or switch case scoping issues
+
+### Documentation
+- Added comprehensive verification report documenting all fixes for plugin submission review
+
+---
+
 ## [1.1.0] - 2025-10-30
 
 ### Added
