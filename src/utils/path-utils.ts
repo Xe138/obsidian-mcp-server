@@ -65,7 +65,8 @@ export class PathUtils {
 		}
 
 		// Check for invalid characters (Windows restrictions)
-		const invalidChars = /[<>:"|?*\x00-\x1F]/;
+		// Invalid chars: < > : " | ? * and ASCII control characters (0-31)
+		const invalidChars = /[<>:"|?*\u0000-\u001F]/;
 		if (invalidChars.test(normalized)) {
 			return false;
 		}

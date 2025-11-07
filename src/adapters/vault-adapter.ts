@@ -43,10 +43,6 @@ export class VaultAdapter implements IVaultAdapter {
 		await this.vault.modify(file, data);
 	}
 
-	async delete(file: TAbstractFile): Promise<void> {
-		await this.vault.delete(file);
-	}
-
 	async trash(file: TAbstractFile, system: boolean): Promise<void> {
 		await this.vault.trash(file, system);
 	}
