@@ -65,7 +65,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			.setName('Notification history')
 			.setDesc('View recent MCP tool calls')
 			.addButton(button => button
-				.setButtonText('View History')
+				.setButtonText('View history')
 				.onClick(() => {
 					this.plugin.showNotificationHistory();
 				}));
@@ -129,12 +129,12 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setHeading()
-			.setName('MCP Server Settings');
+			.setName('MCP server settings');
 
 		// Server status
 		new Setting(containerEl)
 			.setHeading()
-			.setName('Server Status');
+			.setName('Server status');
 
 		const statusEl = containerEl.createEl('div', {cls: 'mcp-server-status'});
 		const isRunning = this.plugin.mcpServer?.isRunning() ?? false;
@@ -149,7 +149,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		const buttonContainer = containerEl.createEl('div', {cls: 'mcp-button-container'});
 
 		if (isRunning) {
-			buttonContainer.createEl('button', {text: 'Stop Server'})
+			buttonContainer.createEl('button', {text: 'Stop server'})
 				.addEventListener('click', () => {
 					void (async () => {
 						await this.plugin.stopServer();
@@ -157,7 +157,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					})();
 				});
 
-			buttonContainer.createEl('button', {text: 'Restart Server'})
+			buttonContainer.createEl('button', {text: 'Restart server'})
 				.addEventListener('click', () => {
 					void (async () => {
 						await this.plugin.stopServer();
@@ -166,7 +166,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 					})();
 				});
 		} else {
-			buttonContainer.createEl('button', {text: 'Start Server'})
+			buttonContainer.createEl('button', {text: 'Start server'})
 				.addEventListener('click', () => {
 					void (async () => {
 						await this.plugin.startServer();
@@ -214,7 +214,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// API Key Display (always show - auth is always enabled)
 		new Setting(authDetails)
-			.setName('API Key Management')
+			.setName('API key management')
 			.setDesc('Use as Bearer token in Authorization header');
 
 		// Create a full-width container for buttons and key display
@@ -224,7 +224,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		const apiKeyButtonContainer = apiKeyContainer.createDiv({cls: 'mcp-button-group'});
 
 		// Copy button
-		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
+		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy key'});
 		copyButton.addEventListener('click', () => {
 			void (async () => {
 				await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
@@ -233,7 +233,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		});
 
 		// Regenerate button
-		const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate Key'});
+		const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate key'});
 		regenButton.addEventListener('click', () => {
 			void (async () => {
 				this.plugin.settings.apiKey = generateApiKey();
@@ -253,7 +253,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// MCP Client Configuration heading
 		new Setting(authDetails)
 			.setHeading()
-			.setName('MCP Client Configuration');
+			.setName('MCP client configuration');
 
 		const configContainer = authDetails.createDiv({cls: 'mcp-container'});
 
@@ -297,7 +297,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Copy button
 		const copyConfigButton = tabContent.createEl('button', {
-			text: '📋 Copy Configuration',
+			text: '📋 Copy configuration',
 			cls: 'mcp-config-button'
 		});
 		copyConfigButton.addEventListener('click', () => {
@@ -428,7 +428,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Copy button
 		const copyConfigButton = tabContent.createEl('button', {
-			text: '📋 Copy Configuration',
+			text: '📋 Copy configuration',
 			cls: 'mcp-config-button'
 		});
 		copyConfigButton.addEventListener('click', () => {

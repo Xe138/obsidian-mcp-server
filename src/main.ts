@@ -99,13 +99,13 @@ export default class MCPServerPlugin extends Plugin {
 
 	async startServer() {
 		if (this.mcpServer?.isRunning()) {
-			new Notice('MCP Server is already running');
+			new Notice('MCP server is already running');
 			return;
 		}
 
 		// Validate authentication configuration
 		if (this.settings.enableAuth && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
-			new Notice('⚠️ Cannot start server: Authentication is enabled but no API key is set. Please set an API key in settings or disable authentication.');
+			new Notice('⚠️ Cannot start server: authentication is enabled but no API key is set. Please set an API key in settings or disable authentication.');
 			return;
 		}
 
@@ -116,28 +116,28 @@ export default class MCPServerPlugin extends Plugin {
 				this.mcpServer.setNotificationManager(this.notificationManager);
 			}
 			await this.mcpServer.start();
-			new Notice(`MCP Server started on port ${this.settings.port}`);
+			new Notice(`MCP server started on port ${this.settings.port}`);
 			this.updateStatusBar();
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			new Notice(`Failed to start MCP Server: ${message}`);
+			new Notice(`Failed to start MCP server: ${message}`);
 			console.error('MCP Server start error:', error);
 		}
 	}
 
 	async stopServer() {
 		if (!this.mcpServer?.isRunning()) {
-			new Notice('MCP Server is not running');
+			new Notice('MCP server is not running');
 			return;
 		}
 
 		try {
 			await this.mcpServer.stop();
-			new Notice('MCP Server stopped');
+			new Notice('MCP server stopped');
 			this.updateStatusBar();
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			new Notice(`Failed to stop MCP Server: ${message}`);
+			new Notice(`Failed to stop MCP server: ${message}`);
 			console.error('MCP Server stop error:', error);
 		}
 	}

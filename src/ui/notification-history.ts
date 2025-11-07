@@ -26,7 +26,7 @@ export class NotificationHistoryModal extends Modal {
 		contentEl.addClass('mcp-notification-history-modal');
 
 		// Title
-		contentEl.createEl('h2', { text: 'MCP Notification History' });
+		contentEl.createEl('h2', { text: 'MCP notification history' });
 
 		// Filters (create once, never recreate)
 		this.createFilters(contentEl);
@@ -161,7 +161,7 @@ export class NotificationHistoryModal extends Modal {
 		const actionsContainer = containerEl.createDiv({ cls: 'mcp-history-actions' });
 
 		// Export button
-		const exportButton = actionsContainer.createEl('button', { text: 'Export to Clipboard' });
+		const exportButton = actionsContainer.createEl('button', { text: 'Export to clipboard' });
 		exportButton.addEventListener('click', () => {
 			void (async () => {
 				const exportData = JSON.stringify(this.filteredHistory, null, 2);
@@ -169,7 +169,7 @@ export class NotificationHistoryModal extends Modal {
 				// Show temporary success message
 				exportButton.textContent = '✅ Copied!';
 				setTimeout(() => {
-					exportButton.textContent = 'Export to Clipboard';
+					exportButton.textContent = 'Export to clipboard';
 				}, 2000);
 			})();
 		});
