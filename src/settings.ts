@@ -127,10 +127,14 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		this.authDetailsEl = null;
 		this.configContainerEl = null;
 
-		containerEl.createEl('h2', {text: 'MCP Server Settings'});
+		new Setting(containerEl)
+			.setHeading()
+			.setName('MCP Server Settings');
 
 		// Server status
-		containerEl.createEl('h3', {text: 'Server Status'});
+		new Setting(containerEl)
+			.setHeading()
+			.setName('Server Status');
 
 		const statusEl = containerEl.createEl('div', {cls: 'mcp-server-status'});
 		const isRunning = this.plugin.mcpServer?.isRunning() ?? false;
@@ -247,7 +251,9 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		keyDisplayContainer.textContent = this.plugin.settings.apiKey || '';
 
 		// MCP Client Configuration heading
-		authDetails.createEl('h4', {text: 'MCP Client Configuration', cls: 'mcp-heading'});
+		new Setting(authDetails)
+			.setHeading()
+			.setName('MCP Client Configuration');
 
 		const configContainer = authDetails.createDiv({cls: 'mcp-container'});
 
