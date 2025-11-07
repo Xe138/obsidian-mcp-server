@@ -8,7 +8,11 @@ interface ElectronSafeStorage {
 // Safely import safeStorage - may not be available in all environments
 let safeStorage: ElectronSafeStorage | null = null;
 try {
-	const electron = require('electron');
+	// Note: require() is necessary here for synchronous access to Electron's safeStorage
+	// This module is loaded conditionally and may not be available in all environments
+	// esbuild will handle this correctly during bundling
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const electron = require('electron') as typeof import('electron');
 	safeStorage = electron.safeStorage || null;
 } catch (error) {
 	console.warn('Electron safeStorage not available, API keys will be stored in plaintext');

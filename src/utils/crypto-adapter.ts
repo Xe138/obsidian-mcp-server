@@ -17,9 +17,16 @@ function getCrypto(): Crypto {
 
 	// Node.js environment (15+) - uses Web Crypto API standard
 	if (typeof global !== 'undefined') {
-		const nodeCrypto = require('crypto');
-		if (nodeCrypto.webcrypto) {
-			return nodeCrypto.webcrypto;
+		try {
+			// Note: require() is necessary here for synchronous crypto access in Node.js
+			// This module is loaded conditionally and esbuild will handle this correctly during bundling
+			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			const nodeCrypto = require('crypto') as typeof import('crypto');
+			if (nodeCrypto?.webcrypto) {
+				return nodeCrypto.webcrypto as unknown as Crypto;
+			}
+		} catch {
+			// Crypto module not available or failed to load
 		}
 	}
 
