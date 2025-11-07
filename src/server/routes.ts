@@ -2,9 +2,9 @@ import { Express, Request, Response } from 'express';
 import { JSONRPCRequest, JSONRPCResponse, ErrorCodes } from '../types/mcp-types';
 
 export function setupRoutes(
-	app: Express, 
+	app: Express,
 	handleRequest: (request: JSONRPCRequest) => Promise<JSONRPCResponse>,
-	createErrorResponse: (id: any, code: number, message: string) => JSONRPCResponse
+	createErrorResponse: (id: string | number | null, code: number, message: string) => JSONRPCResponse
 ): void {
 	// Main MCP endpoint
 	app.post('/mcp', async (req: Request, res: Response) => {

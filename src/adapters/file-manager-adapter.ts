@@ -1,5 +1,5 @@
 import { FileManager, TAbstractFile, TFile } from 'obsidian';
-import { IFileManagerAdapter } from './interfaces';
+import { IFileManagerAdapter, FrontmatterValue } from './interfaces';
 
 export class FileManagerAdapter implements IFileManagerAdapter {
 	constructor(private fileManager: FileManager) {}
@@ -12,7 +12,7 @@ export class FileManagerAdapter implements IFileManagerAdapter {
 		await this.fileManager.trashFile(file);
 	}
 
-	async processFrontMatter(file: TFile, fn: (frontmatter: any) => void): Promise<void> {
+	async processFrontMatter(file: TFile, fn: (frontmatter: Record<string, FrontmatterValue>) => void): Promise<void> {
 		await this.fileManager.processFrontMatter(file, fn);
 	}
 }

@@ -1,10 +1,10 @@
-import { Express, Request, Response } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import express from 'express';
 import cors from 'cors';
 import { MCPServerSettings } from '../types/settings-types';
-import { ErrorCodes } from '../types/mcp-types';
+import { ErrorCodes, JSONRPCResponse } from '../types/mcp-types';
 
-export function setupMiddleware(app: Express, settings: MCPServerSettings, createErrorResponse: (id: any, code: number, message: string) => any): void {
+export function setupMiddleware(app: Express, settings: MCPServerSettings, createErrorResponse: (id: string | number | null, code: number, message: string) => JSONRPCResponse): void {
 	// Parse JSON bodies
 	app.use(express.json());
 
@@ -29,7 +29,7 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 	app.use(cors(corsOptions));
 
 	// Authentication middleware - Always enabled
-	app.use((req: Request, res: Response, next: any) => {
+	app.use((req: Request, res: Response, next: NextFunction) => {
 		// Defensive check: if no API key is set, reject all requests
 		if (!settings.apiKey || settings.apiKey.trim() === '') {
 			return res.status(500).json(createErrorResponse(null, ErrorCodes.InternalError, 'Server misconfigured: No API key set'));
@@ -45,7 +45,7 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 	});
 
 	// Origin validation for security (DNS rebinding protection)
-	app.use((req: Request, res: Response, next: any) => {
+	app.use((req: Request, res: Response, next: NextFunction) => {
 		const host = req.headers.host;
 
 		// Only allow localhost connections

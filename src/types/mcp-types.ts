@@ -1,22 +1,39 @@
 // MCP Protocol Types
+
+/**
+ * JSON-RPC compatible value types
+ */
+export type JSONValue =
+	| string
+	| number
+	| boolean
+	| null
+	| JSONValue[]
+	| { [key: string]: JSONValue };
+
+/**
+ * JSON-RPC parameters can be an object or array
+ */
+export type JSONRPCParams = { [key: string]: JSONValue } | JSONValue[];
+
 export interface JSONRPCRequest {
 	jsonrpc: "2.0";
 	id?: string | number;
 	method: string;
-	params?: any;
+	params?: JSONRPCParams;
 }
 
 export interface JSONRPCResponse {
 	jsonrpc: "2.0";
 	id: string | number | null;
-	result?: any;
+	result?: JSONValue;
 	error?: JSONRPCError;
 }
 
 export interface JSONRPCError {
 	code: number;
 	message: string;
-	data?: any;
+	data?: JSONValue;
 }
 
 export enum ErrorCodes {
@@ -38,12 +55,25 @@ export interface InitializeResult {
 	};
 }
 
+/**
+ * JSON Schema property definition
+ */
+export interface JSONSchemaProperty {
+	type: string;
+	description?: string;
+	enum?: string[];
+	items?: JSONSchemaProperty;
+	properties?: Record<string, JSONSchemaProperty>;
+	required?: string[];
+	[key: string]: string | string[] | JSONSchemaProperty | Record<string, JSONSchemaProperty> | undefined;
+}
+
 export interface Tool {
 	name: string;
 	description: string;
 	inputSchema: {
 		type: string;
-		properties: Record<string, any>;
+		properties: Record<string, JSONSchemaProperty>;
 		required?: string[];
 	};
 }
@@ -160,7 +190,7 @@ export interface FrontmatterSummary {
 	title?: string;
 	tags?: string[];
 	aliases?: string[];
-	[key: string]: any;
+	[key: string]: JSONValue | undefined;
 }
 
 export interface FileMetadataWithFrontmatter extends FileMetadata {
@@ -179,7 +209,7 @@ export interface ParsedNote {
 	path: string;
 	hasFrontmatter: boolean;
 	frontmatter?: string;
-	parsedFrontmatter?: Record<string, any>;
+	parsedFrontmatter?: Record<string, JSONValue>;
 	content: string;
 	contentWithoutFrontmatter?: string;
 	wordCount?: number;
@@ -200,9 +230,9 @@ export interface ExcalidrawMetadata {
 	hasCompressedData?: boolean;
 	/** Drawing metadata including appState and version */
 	metadata?: {
-		appState?: Record<string, any>;
+		appState?: Record<string, JSONValue>;
 		version?: number;
-		[key: string]: any;
+		[key: string]: JSONValue | undefined;
 	};
 	/** Preview text extracted from text elements section (when includePreview=true) */
 	preview?: string;

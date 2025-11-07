@@ -13,7 +13,7 @@ import {
 } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
-import { FrontmatterUtils } from '../utils/frontmatter-utils';
+import { FrontmatterUtils, YAMLValue } from '../utils/frontmatter-utils';
 import { WaypointUtils } from '../utils/waypoint-utils';
 import { VersionUtils } from '../utils/version-utils';
 import { ContentUtils } from '../utils/content-utils';
@@ -364,15 +364,27 @@ export class NoteTools {
 			await this.vault.modify(file, content);
 
 			// Build response with word count and link validation
-			const result: any = {
+			interface UpdateNoteResult {
+				success: boolean;
+				path: string;
+				versionId: string;
+				modified: number;
+				wordCount?: number;
+				linkValidation?: {
+					valid: string[];
+					brokenNotes: Array<{ link: string; line: number; context: string }>;
+					brokenHeadings: Array<{ link: string; line: number; context: string; note: string }>;
+					summary: string;
+				};
+			}
+
+			const result: UpdateNoteResult = {
 				success: true,
 				path: file.path,
 				versionId: VersionUtils.generateVersionId(file),
-				modified: file.stat.mtime
+				modified: file.stat.mtime,
+				wordCount: ContentUtils.countWords(content)
 			};
-
-			// Add word count
-			result.wordCount = ContentUtils.countWords(content);
 
 			// Add link validation if requested
 			if (validateLinks) {
@@ -731,7 +743,7 @@ export class NoteTools {
 	 */
 	async updateFrontmatter(
 		path: string,
-		patch?: Record<string, any>,
+		patch?: Record<string, YAMLValue>,
 		remove: string[] = [],
 		ifMatch?: string
 	): Promise<CallToolResult> {

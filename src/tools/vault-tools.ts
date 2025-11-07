@@ -385,8 +385,10 @@ export class VaultTools {
 		// In most cases, this will be 0 for directories
 		let modified = 0;
 		try {
-			if ((folder as any).stat && typeof (folder as any).stat.mtime === 'number') {
-				modified = (folder as any).stat.mtime;
+			// TFolder doesn't officially have stat, but it may exist in practice
+			const folderWithStat = folder as TFolder & { stat?: { mtime?: number } };
+			if (folderWithStat.stat && typeof folderWithStat.stat.mtime === 'number') {
+				modified = folderWithStat.stat.mtime;
 			}
 		} catch (error) {
 			// Silently fail - modified will remain 0

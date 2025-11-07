@@ -4,6 +4,8 @@ import { Server } from 'http';
 import {
 	JSONRPCRequest,
 	JSONRPCResponse,
+	JSONRPCParams,
+	JSONValue,
 	ErrorCodes,
 	InitializeResult,
 	ListToolsResult,
@@ -36,11 +38,11 @@ export class MCPServer {
 		try {
 			switch (request.method) {
 				case 'initialize':
-					return this.createSuccessResponse(request.id, await this.handleInitialize(request.params));
+					return this.createSuccessResponse(request.id, await this.handleInitialize(request.params ?? {}));
 				case 'tools/list':
 					return this.createSuccessResponse(request.id, await this.handleListTools());
 				case 'tools/call':
-					return this.createSuccessResponse(request.id, await this.handleCallTool(request.params));
+					return this.createSuccessResponse(request.id, await this.handleCallTool(request.params ?? {}));
 				case 'ping':
 					return this.createSuccessResponse(request.id, {});
 				default:
@@ -52,7 +54,7 @@ export class MCPServer {
 		}
 	}
 
-	private async handleInitialize(_params: any): Promise<InitializeResult> {
+	private async handleInitialize(_params: JSONRPCParams): Promise<InitializeResult> {
 		return {
 			protocolVersion: "2024-11-05",
 			capabilities: {
@@ -71,20 +73,20 @@ export class MCPServer {
 		};
 	}
 
-	private async handleCallTool(params: any): Promise<CallToolResult> {
-		const { name, arguments: args } = params;
-		return await this.toolRegistry.callTool(name, args);
+	private async handleCallTool(params: JSONRPCParams): Promise<CallToolResult> {
+		const paramsObj = params as { name: string; arguments: Record<string, unknown> };
+		return await this.toolRegistry.callTool(paramsObj.name, paramsObj.arguments);
 	}
 
-	private createSuccessResponse(id: string | number | undefined, result: any): JSONRPCResponse {
+	private createSuccessResponse(id: string | number | undefined, result: unknown): JSONRPCResponse {
 		return {
 			jsonrpc: "2.0",
 			id: id ?? null,
-			result
+			result: result as JSONValue
 		};
 	}
 
-	private createErrorResponse(id: string | number | undefined | null, code: number, message: string, data?: any): JSONRPCResponse {
+	private createErrorResponse(id: string | number | undefined | null, code: number, message: string, data?: JSONValue): JSONRPCResponse {
 		return {
 			jsonrpc: "2.0",
 			id: id ?? null,
@@ -104,7 +106,7 @@ export class MCPServer {
 					resolve();
 				});
 
-				this.server.on('error', (error: any) => {
+				this.server.on('error', (error: NodeJS.ErrnoException) => {
 					if (error.code === 'EADDRINUSE') {
 						reject(new Error(`Port ${this.settings.port} is already in use`));
 					} else {

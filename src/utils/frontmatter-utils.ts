@@ -1,6 +1,17 @@
 import { parseYaml } from 'obsidian';
 
 /**
+ * YAML value types that can appear in frontmatter
+ */
+export type YAMLValue =
+	| string
+	| number
+	| boolean
+	| null
+	| YAMLValue[]
+	| { [key: string]: YAMLValue };
+
+/**
  * Utility class for parsing and extracting frontmatter from markdown files
  */
 export class FrontmatterUtils {
@@ -11,7 +22,7 @@ export class FrontmatterUtils {
 	static extractFrontmatter(content: string): {
 		hasFrontmatter: boolean;
 		frontmatter: string;
-		parsedFrontmatter: Record<string, any> | null;
+		parsedFrontmatter: Record<string, YAMLValue> | null;
 		content: string;
 		contentWithoutFrontmatter: string;
 	} {
@@ -59,7 +70,7 @@ export class FrontmatterUtils {
 		const contentWithoutFrontmatter = contentLines.join('\n');
 
 		// Parse YAML using Obsidian's built-in parser
-		let parsedFrontmatter: Record<string, any> | null = null;
+		let parsedFrontmatter: Record<string, YAMLValue> | null = null;
 		try {
 			parsedFrontmatter = parseYaml(frontmatter) || {};
 		} catch (error) {
@@ -80,17 +91,17 @@ export class FrontmatterUtils {
 	 * Extract only the frontmatter summary (common fields)
 	 * Useful for list operations without reading full content
 	 */
-	static extractFrontmatterSummary(parsedFrontmatter: Record<string, any> | null): {
+	static extractFrontmatterSummary(parsedFrontmatter: Record<string, YAMLValue> | null): {
 		title?: string;
 		tags?: string[];
 		aliases?: string[];
-		[key: string]: any;
+		[key: string]: YAMLValue | undefined;
 	} | null {
 		if (!parsedFrontmatter) {
 			return null;
 		}
 
-		const summary: Record<string, any> = {};
+		const summary: Record<string, YAMLValue> = {};
 
 		// Extract common fields
 		if (parsedFrontmatter.title) {
@@ -136,7 +147,7 @@ export class FrontmatterUtils {
 	 * Serialize frontmatter object to YAML string with delimiters
 	 * Returns the complete frontmatter block including --- delimiters
 	 */
-	static serializeFrontmatter(data: Record<string, any>): string {
+	static serializeFrontmatter(data: Record<string, YAMLValue>): string {
 		if (!data || Object.keys(data).length === 0) {
 			return '';
 		}
@@ -203,7 +214,7 @@ export class FrontmatterUtils {
 		isExcalidraw: boolean;
 		elementCount?: number;
 		hasCompressedData?: boolean;
-		metadata?: Record<string, any>;
+		metadata?: Record<string, YAMLValue>;
 	} {
 		try {
 			// Excalidraw files are typically markdown with a code block containing JSON
@@ -287,7 +298,7 @@ export class FrontmatterUtils {
 
 			// Check if data is compressed (base64 encoded)
 			const trimmedJson = jsonString.trim();
-			let jsonData: any;
+			let jsonData: Record<string, YAMLValue>;
 			
 			if (trimmedJson.startsWith('N4KAk') || !trimmedJson.startsWith('{')) {
 				// Data is compressed - try to decompress
@@ -328,9 +339,9 @@ export class FrontmatterUtils {
 			
 			// Parse the JSON (uncompressed format)
 			jsonData = JSON.parse(trimmedJson);
-			
+
 			// Count elements
-			const elementCount = jsonData.elements ? jsonData.elements.length : 0;
+			const elementCount = Array.isArray(jsonData.elements) ? jsonData.elements.length : 0;
 			
 			// Check for compressed data (files or images)
 			const hasCompressedData = !!(jsonData.files && Object.keys(jsonData.files).length > 0);

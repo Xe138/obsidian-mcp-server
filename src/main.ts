@@ -24,7 +24,11 @@ export default class MCPServerPlugin extends Plugin {
 		}
 
 		// Migrate legacy settings (remove enableCORS and allowedOrigins)
-		const legacySettings = this.settings as any;
+		interface LegacySettings extends MCPPluginSettings {
+			enableCORS?: boolean;
+			allowedOrigins?: string[];
+		}
+		const legacySettings = this.settings as LegacySettings;
 		if ('enableCORS' in legacySettings || 'allowedOrigins' in legacySettings) {
 			console.log('Migrating legacy CORS settings...');
 			delete legacySettings.enableCORS;

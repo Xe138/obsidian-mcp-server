@@ -1,6 +1,11 @@
 import { TAbstractFile, TFile, TFolder, CachedMetadata, DataWriteOptions } from 'obsidian';
 
 /**
+ * Frontmatter data structure (YAML-compatible types)
+ */
+export type FrontmatterValue = string | number | boolean | null | FrontmatterValue[] | { [key: string]: FrontmatterValue };
+
+/**
  * Adapter interface for Obsidian Vault operations
  */
 export interface IVaultAdapter {
@@ -56,5 +61,5 @@ export interface IFileManagerAdapter {
 	// File operations
 	renameFile(file: TAbstractFile, newPath: string): Promise<void>;
 	trashFile(file: TAbstractFile): Promise<void>;
-	processFrontMatter(file: TFile, fn: (frontmatter: any) => void): Promise<void>;
+	processFrontMatter(file: TFile, fn: (frontmatter: Record<string, FrontmatterValue>) => void): Promise<void>;
 }

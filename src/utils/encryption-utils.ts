@@ -1,5 +1,12 @@
+// Define Electron SafeStorage interface
+interface ElectronSafeStorage {
+	isEncryptionAvailable(): boolean;
+	encryptString(plainText: string): Buffer;
+	decryptString(encrypted: Buffer): string;
+}
+
 // Safely import safeStorage - may not be available in all environments
-let safeStorage: any = null;
+let safeStorage: ElectronSafeStorage | null = null;
 try {
 	const electron = require('electron');
 	safeStorage = electron.safeStorage || null;
@@ -35,7 +42,7 @@ export function encryptApiKey(apiKey: string): string {
 	}
 
 	try {
-		const encrypted = safeStorage.encryptString(apiKey);
+		const encrypted = safeStorage!.encryptString(apiKey);
 		return `encrypted:${encrypted.toString('base64')}`;
 	} catch (error) {
 		console.error('Failed to encrypt API key, falling back to plaintext:', error);
