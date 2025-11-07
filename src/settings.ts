@@ -146,22 +146,28 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		if (isRunning) {
 			buttonContainer.createEl('button', {text: 'Stop Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.stopServer();
-					this.display();
+				.addEventListener('click', () => {
+					void (async () => {
+						await this.plugin.stopServer();
+						this.display();
+					})();
 				});
 
 			buttonContainer.createEl('button', {text: 'Restart Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.stopServer();
-					await this.plugin.startServer();
-					this.display();
+				.addEventListener('click', () => {
+					void (async () => {
+						await this.plugin.stopServer();
+						await this.plugin.startServer();
+						this.display();
+					})();
 				});
 		} else {
 			buttonContainer.createEl('button', {text: 'Start Server'})
-				.addEventListener('click', async () => {
-					await this.plugin.startServer();
-					this.display();
+				.addEventListener('click', () => {
+					void (async () => {
+						await this.plugin.startServer();
+						this.display();
+					})();
 				});
 		}
 
@@ -215,21 +221,25 @@ export class MCPServerSettingTab extends PluginSettingTab {
 
 		// Copy button
 		const copyButton = apiKeyButtonContainer.createEl('button', {text: '📋 Copy Key'});
-		copyButton.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
-			new Notice('✅ API key copied to clipboard');
+		copyButton.addEventListener('click', () => {
+			void (async () => {
+				await navigator.clipboard.writeText(this.plugin.settings.apiKey || '');
+				new Notice('✅ API key copied to clipboard');
+			})();
 		});
 
 		// Regenerate button
 		const regenButton = apiKeyButtonContainer.createEl('button', {text: '🔄 Regenerate Key'});
-		regenButton.addEventListener('click', async () => {
-			this.plugin.settings.apiKey = generateApiKey();
-			await this.plugin.saveSettings();
-			new Notice('✅ New API key generated');
-			if (this.plugin.mcpServer?.isRunning()) {
-				new Notice('⚠️ Server restart required for API key changes to take effect');
-			}
-			this.display();
+		regenButton.addEventListener('click', () => {
+			void (async () => {
+				this.plugin.settings.apiKey = generateApiKey();
+				await this.plugin.saveSettings();
+				new Notice('✅ New API key generated');
+				if (this.plugin.mcpServer?.isRunning()) {
+					new Notice('⚠️ Server restart required for API key changes to take effect');
+				}
+				this.display();
+			})();
 		});
 
 		// API Key display (static, copyable text)
@@ -284,9 +294,11 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			text: '📋 Copy Configuration',
 			cls: 'mcp-config-button'
 		});
-		copyConfigButton.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
-			new Notice('✅ Configuration copied to clipboard');
+		copyConfigButton.addEventListener('click', () => {
+			void (async () => {
+				await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+				new Notice('✅ Configuration copied to clipboard');
+			})();
 		});
 
 		// Config JSON display
@@ -413,9 +425,11 @@ export class MCPServerSettingTab extends PluginSettingTab {
 			text: '📋 Copy Configuration',
 			cls: 'mcp-config-button'
 		});
-		copyConfigButton.addEventListener('click', async () => {
-			await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
-			new Notice('✅ Configuration copied to clipboard');
+		copyConfigButton.addEventListener('click', () => {
+			void (async () => {
+				await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+				new Notice('✅ Configuration copied to clipboard');
+			})();
 		});
 
 		// Config JSON display

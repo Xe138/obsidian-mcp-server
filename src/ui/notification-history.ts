@@ -162,14 +162,16 @@ export class NotificationHistoryModal extends Modal {
 
 		// Export button
 		const exportButton = actionsContainer.createEl('button', { text: 'Export to Clipboard' });
-		exportButton.addEventListener('click', async () => {
-			const exportData = JSON.stringify(this.filteredHistory, null, 2);
-			await navigator.clipboard.writeText(exportData);
-			// Show temporary success message
-			exportButton.textContent = '✅ Copied!';
-			setTimeout(() => {
-				exportButton.textContent = 'Export to Clipboard';
-			}, 2000);
+		exportButton.addEventListener('click', () => {
+			void (async () => {
+				const exportData = JSON.stringify(this.filteredHistory, null, 2);
+				await navigator.clipboard.writeText(exportData);
+				// Show temporary success message
+				exportButton.textContent = '✅ Copied!';
+				setTimeout(() => {
+					exportButton.textContent = 'Export to Clipboard';
+				}, 2000);
+			})();
 		});
 
 		// Close button
