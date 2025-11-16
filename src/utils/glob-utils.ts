@@ -45,7 +45,7 @@ export class GlobUtils {
 					i++;
 					break;
 				
-				case '[':
+				case '[': {
 					// Character class
 					const closeIdx = pattern.indexOf(']', i);
 					if (closeIdx === -1) {
@@ -57,8 +57,9 @@ export class GlobUtils {
 						i = closeIdx + 1;
 					}
 					break;
-				
-				case '{':
+				}
+
+				case '{': {
 					// Alternatives {a,b,c}
 					const closeIdx2 = pattern.indexOf('}', i);
 					if (closeIdx2 === -1) {
@@ -67,13 +68,14 @@ export class GlobUtils {
 						i++;
 					} else {
 						const alternatives = pattern.substring(i + 1, closeIdx2).split(',');
-						regexStr += '(' + alternatives.map(alt => 
+						regexStr += '(' + alternatives.map(alt =>
 							this.escapeRegex(alt)
 						).join('|') + ')';
 						i = closeIdx2 + 1;
 					}
 					break;
-				
+				}
+
 				case '/':
 				case '.':
 				case '(':

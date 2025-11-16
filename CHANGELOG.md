@@ -10,6 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.2] - 2025-11-15
+
+### Fixed
+- **Code Review Issues**: Addressed all issues from Obsidian plugin submission review
+  - **Type Safety**: Added eslint-disable comments with justifications for all necessary `any` types in JSON-RPC tool argument handling
+  - **Command IDs**: Removed redundant plugin name prefix from command identifiers (BREAKING CHANGE):
+    - `start-mcp-server` → `start-server`
+    - `stop-mcp-server` → `stop-server`
+    - `restart-mcp-server` → `restart-server`
+  - **Promise Handling**: Added `void` operator for intentional fire-and-forget promise in notification queue processing
+  - **ESLint Directives**: Added descriptive explanations to all eslint-disable comments
+  - **Switch Statement Scope**: Wrapped case blocks in braces to fix lexical declaration warnings in glob pattern matcher
+  - **Regular Expression**: Added eslint-disable comment for control character validation in Windows path checking
+  - **Type Definitions**: Changed empty object type `{}` to `object` in MCP capabilities interface
+  - **Import Statements**: Added comprehensive justifications for `require()` usage in Electron/Node.js modules (synchronous access required)
+  - **Code Cleanup**: Removed unused imports (`MCPPluginSettings`, `TFile`, `VaultInfo`)
+
+### Changed
+- Command IDs simplified to remove redundant plugin identifier (may affect users with custom hotkeys)
+
+### Documentation
+- Enhanced inline code documentation for ESLint suppressions and require() statements
+- Added detailed rationale for synchronous module loading requirements in Obsidian plugin context
+
+---
+
 ## [1.1.1] - 2025-11-07
 
 ### Fixed

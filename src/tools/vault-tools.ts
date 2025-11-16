@@ -1,5 +1,5 @@
 import { TFile, TFolder } from 'obsidian';
-import { CallToolResult, FileMetadata, DirectoryMetadata, VaultInfo, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult, FolderWaypointResult, FolderNoteResult, ValidateWikilinksResult, ResolveWikilinkResult, BacklinksResult } from '../types/mcp-types';
+import { CallToolResult, FileMetadata, DirectoryMetadata, SearchResult, SearchMatch, StatResult, ExistsResult, ListResult, FileMetadataWithFrontmatter, FrontmatterSummary, WaypointSearchResult, FolderWaypointResult, FolderNoteResult, ValidateWikilinksResult, ResolveWikilinkResult, BacklinksResult } from '../types/mcp-types';
 import { PathUtils } from '../utils/path-utils';
 import { ErrorMessages } from '../utils/error-messages';
 import { GlobUtils } from '../utils/glob-utils';

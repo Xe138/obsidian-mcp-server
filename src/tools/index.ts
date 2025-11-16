@@ -474,7 +474,7 @@ export class ToolRegistry {
 		];
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and require runtime validation
 	async callTool(name: string, args: any): Promise<CallToolResult> {
 		const startTime = Date.now();
 		

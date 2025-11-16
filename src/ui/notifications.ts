@@ -7,7 +7,7 @@ import { MCPPluginSettings } from '../types/settings-types';
 export interface NotificationHistoryEntry {
 	timestamp: number;
 	toolName: string;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
 	args: any;
 	success: boolean;
 	duration?: number;
@@ -75,7 +75,7 @@ export class NotificationManager {
 	/**
 	 * Show notification for tool call start
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
 	showToolCall(toolName: string, args: any, duration?: number): void {
 		if (!this.shouldShowNotification()) {
 			return;
@@ -142,7 +142,7 @@ export class NotificationManager {
 	/**
 	 * Format arguments for display
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
 	private formatArgs(args: any): string {
 		if (!this.settings.showParameters) {
 			return '';
@@ -196,9 +196,9 @@ export class NotificationManager {
 	 */
 	private queueNotification(notificationFn: () => void): void {
 		this.notificationQueue.push(notificationFn);
-		
+
 		if (!this.isProcessingQueue) {
-			this.processQueue();
+			void this.processQueue();
 		}
 	}
 

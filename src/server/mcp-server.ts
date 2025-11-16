@@ -74,7 +74,8 @@ export class MCPServer {
 	}
 
 	private async handleCallTool(params: JSONRPCParams): Promise<CallToolResult> {
-		const paramsObj = params as { name: string; arguments: Record<string, unknown> };
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and need runtime validation
+		const paramsObj = params as { name: string; arguments: any };
 		return await this.toolRegistry.callTool(paramsObj.name, paramsObj.arguments);
 	}
 

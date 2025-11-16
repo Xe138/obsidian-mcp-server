@@ -1,5 +1,4 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
-import { MCPPluginSettings } from './types/settings-types';
 import MCPServerPlugin from './main';
 import { generateApiKey } from './utils/auth-utils';
 

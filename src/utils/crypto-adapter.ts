@@ -18,9 +18,9 @@ function getCrypto(): Crypto {
 	// Node.js environment (15+) - uses Web Crypto API standard
 	if (typeof global !== 'undefined') {
 		try {
-			// Note: require() is necessary here for synchronous crypto access in Node.js
-			// This module is loaded conditionally and esbuild will handle this correctly during bundling
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// Using require() is necessary for synchronous crypto access in Obsidian desktop plugins
+			// ES6 dynamic imports would create race conditions as crypto must be available synchronously
+			// eslint-disable-next-line @typescript-eslint/no-var-requires -- Synchronous Node.js crypto API access required
 			const nodeCrypto = require('crypto') as typeof import('crypto');
 			if (nodeCrypto?.webcrypto) {
 				return nodeCrypto.webcrypto as unknown as Crypto;

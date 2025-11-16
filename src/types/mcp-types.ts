@@ -16,6 +16,11 @@ export type JSONValue =
  */
 export type JSONRPCParams = { [key: string]: JSONValue } | JSONValue[];
 
+/**
+ * Tool arguments are always objects (not arrays)
+ */
+export type ToolArguments = { [key: string]: JSONValue };
+
 export interface JSONRPCRequest {
 	jsonrpc: "2.0";
 	id?: string | number;
@@ -47,7 +52,7 @@ export enum ErrorCodes {
 export interface InitializeResult {
 	protocolVersion: string;
 	capabilities: {
-		tools?: {};
+		tools?: object;
 	};
 	serverInfo: {
 		name: string;

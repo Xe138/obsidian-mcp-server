@@ -66,7 +66,8 @@ export class PathUtils {
 
 		// Check for invalid characters (Windows restrictions)
 		// Invalid chars: < > : " | ? * and ASCII control characters (0-31)
-		const invalidChars = /[<>:"|?*\u0000-\u001F]/;
+		// eslint-disable-next-line no-control-regex -- Control characters \x00-\x1F required for Windows path validation
+		const invalidChars = /[<>:"|?*\x00-\x1F]/;
 		if (invalidChars.test(normalized)) {
 			return false;
 		}
