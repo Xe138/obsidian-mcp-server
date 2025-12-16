@@ -15,7 +15,7 @@ function getCrypto(): Crypto {
 		return window.crypto;
 	}
 
-	// Node.js/Electron environment - globalThis.crypto available in modern runtimes
+	// Node.js/Electron environment - globalThis.crypto available in Node 20+
 	if (typeof globalThis !== 'undefined' && globalThis.crypto) {
 		return globalThis.crypto;
 	}
