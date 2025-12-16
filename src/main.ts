@@ -42,7 +42,7 @@ export default class MCPServerPlugin extends Plugin {
 		this.updateStatusBar();
 
 		// Add ribbon icon to toggle server
-		this.addRibbonIcon('server', 'Toggle MCP Server', async () => {
+		this.addRibbonIcon('server', 'Toggle MCP server', async () => {
 			if (this.mcpServer?.isRunning()) {
 				await this.stopServer();
 			} else {
@@ -93,8 +93,8 @@ export default class MCPServerPlugin extends Plugin {
 		}
 	}
 
-	async onunload() {
-		await this.stopServer();
+	onunload() {
+		void this.stopServer();
 	}
 
 	async startServer() {
