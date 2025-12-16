@@ -7,8 +7,7 @@ import { MCPPluginSettings } from '../types/settings-types';
 export interface NotificationHistoryEntry {
 	timestamp: number;
 	toolName: string;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
-	args: any;
+	args: Record<string, unknown>;
 	success: boolean;
 	duration?: number;
 	error?: string;
@@ -75,8 +74,7 @@ export class NotificationManager {
 	/**
 	 * Show notification for tool call start
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
-	showToolCall(toolName: string, args: any, duration?: number): void {
+	showToolCall(toolName: string, args: Record<string, unknown>, duration?: number): void {
 		if (!this.shouldShowNotification()) {
 			return;
 		}
@@ -142,8 +140,7 @@ export class NotificationManager {
 	/**
 	 * Format arguments for display
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and can be any valid JSON structure
-	private formatArgs(args: any): string {
+	private formatArgs(args: Record<string, unknown>): string {
 		if (!this.settings.showParameters) {
 			return '';
 		}
@@ -156,13 +153,13 @@ export class NotificationManager {
 			// Extract key parameters for display
 			const keyParams: string[] = [];
 
-			if (args.path) {
+			if (args.path && typeof args.path === 'string') {
 				keyParams.push(`path: "${this.truncateString(args.path, 30)}"`);
 			}
-			if (args.query) {
+			if (args.query && typeof args.query === 'string') {
 				keyParams.push(`query: "${this.truncateString(args.query, 30)}"`);
 			}
-			if (args.folder) {
+			if (args.folder && typeof args.folder === 'string') {
 				keyParams.push(`folder: "${this.truncateString(args.folder, 30)}"`);
 			}
 			if (args.recursive !== undefined) {
@@ -176,7 +173,7 @@ export class NotificationManager {
 			}
 
 			return keyParams.join(', ');
-		} catch (e) {
+		} catch {
 			return '';
 		}
 	}
