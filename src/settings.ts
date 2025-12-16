@@ -206,7 +206,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Authentication (Always Enabled)
 		const authDetails = containerEl.createEl('details', {cls: 'mcp-auth-section'});
 		const authSummary = authDetails.createEl('summary', {cls: 'mcp-auth-summary'});
-		authSummary.setText('Authentication & Configuration');
+		authSummary.setText('Authentication & configuration');
 
 		// Store reference for targeted updates
 		this.authDetailsEl = authDetails;
@@ -316,7 +316,7 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		// Notification Settings
 		const notifDetails = containerEl.createEl('details', {cls: 'mcp-auth-section'});
 		const notifSummary = notifDetails.createEl('summary', {cls: 'mcp-auth-summary'});
-		notifSummary.setText('UI Notifications');
+		notifSummary.setText('UI notifications');
 
 		// Store reference for targeted updates
 		this.notificationDetailsEl = notifDetails;
