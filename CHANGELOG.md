@@ -10,6 +10,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.3] - 2025-12-16
+
+### Fixed
+- **Sentence Case**: Fixed remaining UI text violations
+  - `main.ts`: "Toggle MCP Server" → "Toggle MCP server"
+  - `settings.ts`: "Authentication & Configuration" → "Authentication & configuration"
+  - `settings.ts`: "UI Notifications" → "UI notifications"
+
+- **Promise Handling**: Improved async/promise patterns per Obsidian guidelines
+  - `main.ts`: Changed `async onunload()` to synchronous with `void this.stopServer()`
+  - `routes.ts`: Wrapped async Express handler with void IIFE pattern
+  - `mcp-server.ts`: Promise rejection now always uses Error instance
+
+- **Async/Await Cleanup**: Removed `async` from 7 methods that contained no `await`:
+  - `mcp-server.ts`: `handleInitialize`, `handleListTools`
+  - `vault-tools.ts`: `getVaultInfo`, `listNotes`, `createFileMetadataWithFrontmatter`, `exists`, `resolveWikilink`
+  - `link-utils.ts`: `validateLinks`
+
+- **Type Safety**: Replaced `any` types with `Record<string, unknown>` and removed eslint-disable directives
+  - `mcp-server.ts`: Tool arguments type
+  - `tools/index.ts`: `callTool` args parameter
+  - `notifications.ts`: `args` interface field, `showToolCall` parameter, `formatArgs` parameter
+
+- **Import Statements**: Eliminated forbidden `require()` imports
+  - `crypto-adapter.ts`: Replaced `require('crypto')` with `globalThis.crypto`
+  - `encryption-utils.ts`: Replaced bare `require('electron')` with `window.require` pattern
+
+### Changed
+- Updated test mocks to match new synchronous method signatures and import patterns
+
+---
+
 ## [1.1.2] - 2025-11-15
 
 ### Fixed
