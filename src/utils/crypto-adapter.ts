@@ -15,19 +15,9 @@ function getCrypto(): Crypto {
 		return window.crypto;
 	}
 
-	// Node.js environment (15+) - uses Web Crypto API standard
-	if (typeof global !== 'undefined') {
-		try {
-			// Using require() is necessary for synchronous crypto access in Obsidian desktop plugins
-			// ES6 dynamic imports would create race conditions as crypto must be available synchronously
-			// eslint-disable-next-line @typescript-eslint/no-var-requires -- Synchronous Node.js crypto API access required
-			const nodeCrypto = require('crypto') as typeof import('crypto');
-			if (nodeCrypto?.webcrypto) {
-				return nodeCrypto.webcrypto as unknown as Crypto;
-			}
-		} catch {
-			// Crypto module not available or failed to load
-		}
+	// Node.js/Electron environment - globalThis.crypto available in modern runtimes
+	if (typeof globalThis !== 'undefined' && globalThis.crypto) {
+		return globalThis.crypto;
 	}
 
 	throw new Error('No Web Crypto API available in this environment');

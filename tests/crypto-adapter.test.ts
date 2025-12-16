@@ -138,11 +138,18 @@ describe('crypto-adapter', () => {
 			const globalRef = global as any;
 			const originalWindow = globalRef.window;
 			const originalGlobal = globalRef.global;
+			const originalGlobalThisCrypto = globalThis.crypto;
 
 			try {
-				// Remove window.crypto and global access
+				// Remove window.crypto, global access, and globalThis.crypto
 				delete globalRef.window;
 				delete globalRef.global;
+				// In modern Node.js, globalThis.crypto is always available, so we must mock it too
+				Object.defineProperty(globalThis, 'crypto', {
+					value: undefined,
+					writable: true,
+					configurable: true
+				});
 
 				// Clear module cache to force re-evaluation
 				jest.resetModules();
@@ -157,6 +164,12 @@ describe('crypto-adapter', () => {
 				// Restore original values
 				globalRef.window = originalWindow;
 				globalRef.global = originalGlobal;
+				// Restore globalThis.crypto
+				Object.defineProperty(globalThis, 'crypto', {
+					value: originalGlobalThisCrypto,
+					writable: true,
+					configurable: true
+				});
 
 				// Clear module cache again to restore normal state
 				jest.resetModules();
