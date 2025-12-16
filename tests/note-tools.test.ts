@@ -21,7 +21,7 @@ jest.mock('../src/utils/path-utils', () => ({
 // Mock LinkUtils for link validation tests
 jest.mock('../src/utils/link-utils', () => ({
 	LinkUtils: {
-		validateLinks: jest.fn().mockResolvedValue({
+		validateLinks: jest.fn().mockReturnValue({
 			valid: [],
 			brokenNotes: [],
 			brokenHeadings: [],

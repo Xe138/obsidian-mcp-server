@@ -248,7 +248,7 @@ export class NoteTools {
 
 			// Add link validation if requested
 			if (validateLinks) {
-				result.linkValidation = await LinkUtils.validateLinks(
+				result.linkValidation = LinkUtils.validateLinks(
 					this.vault,
 					this.metadata,
 					content,
@@ -388,7 +388,7 @@ export class NoteTools {
 
 			// Add link validation if requested
 			if (validateLinks) {
-				result.linkValidation = await LinkUtils.validateLinks(
+				result.linkValidation = LinkUtils.validateLinks(
 					this.vault,
 					this.metadata,
 					content,
@@ -990,7 +990,7 @@ export class NoteTools {
 
 			// Add link validation if requested
 			if (validateLinks) {
-				result.linkValidation = await LinkUtils.validateLinks(
+				result.linkValidation = LinkUtils.validateLinks(
 					this.vault,
 					this.metadata,
 					newContent,

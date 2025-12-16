@@ -445,12 +445,12 @@ export class LinkUtils {
 	 * @param sourcePath Path of the file containing the links
 	 * @returns Structured validation result with categorized links
 	 */
-	static async validateLinks(
+	static validateLinks(
 		vault: IVaultAdapter,
 		metadata: IMetadataCacheAdapter,
 		content: string,
 		sourcePath: string
-	): Promise<LinkValidationResult> {
+	): LinkValidationResult {
 		const valid: string[] = [];
 		const brokenNotes: BrokenNoteLink[] = [];
 		const brokenHeadings: BrokenHeadingLink[] = [];
