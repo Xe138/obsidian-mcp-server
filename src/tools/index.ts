@@ -577,7 +577,7 @@ export class ToolRegistry {
 					break;
 				}
 				case "get_vault_info":
-					result = await this.vaultTools.getVaultInfo();
+					result = this.vaultTools.getVaultInfo();
 					break;
 				case "list": {
 					const a = args as { path?: string; recursive?: boolean; includes?: string[]; excludes?: string[]; only?: 'files' | 'directories' | 'any'; limit?: number; cursor?: string; withFrontmatterSummary?: boolean; includeWordCount?: boolean };
@@ -601,7 +601,7 @@ export class ToolRegistry {
 				}
 				case "exists": {
 					const a = args as { path: string };
-					result = await this.vaultTools.exists(a.path);
+					result = this.vaultTools.exists(a.path);
 					break;
 				}
 				case "read_excalidraw": {
@@ -629,7 +629,7 @@ export class ToolRegistry {
 				}
 				case "resolve_wikilink": {
 					const a = args as { sourcePath: string; linkText: string };
-					result = await this.vaultTools.resolveWikilink(a.sourcePath, a.linkText);
+					result = this.vaultTools.resolveWikilink(a.sourcePath, a.linkText);
 					break;
 				}
 				case "backlinks": {

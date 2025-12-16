@@ -15,7 +15,7 @@ export class VaultTools {
 		private metadata: IMetadataCacheAdapter
 	) {}
 
-	async getVaultInfo(): Promise<CallToolResult> {
+	getVaultInfo(): CallToolResult {
 		try {
 			const allFiles = this.vault.getMarkdownFiles();
 			const totalNotes = allFiles.length;
@@ -60,7 +60,7 @@ export class VaultTools {
 		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 	}
 
-	async listNotes(path?: string): Promise<CallToolResult> {
+	listNotes(path?: string): CallToolResult {
 		let items: Array<FileMetadata | DirectoryMetadata> = [];
 
 		// Normalize root path: undefined, empty string "", or "." all mean root
@@ -279,7 +279,7 @@ export class VaultTools {
 			// Apply type filtering and add items
 			if (item instanceof TFile) {
 				if (only !== 'directories') {
-					const fileMetadata = await this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary || false);
+					const fileMetadata = this.createFileMetadataWithFrontmatter(item, withFrontmatterSummary || false);
 
 					// Optionally include word count (best effort)
 					if (includeWordCount) {
@@ -307,10 +307,10 @@ export class VaultTools {
 		}
 	}
 
-	private async createFileMetadataWithFrontmatter(
+	private createFileMetadataWithFrontmatter(
 		file: TFile,
 		withFrontmatterSummary: boolean
-	): Promise<FileMetadataWithFrontmatter> {
+	): FileMetadataWithFrontmatter {
 		const baseMetadata = this.createFileMetadata(file);
 
 		if (!withFrontmatterSummary || file.extension !== 'md') {
@@ -495,7 +495,7 @@ export class VaultTools {
 		};
 	}
 
-	async exists(path: string): Promise<CallToolResult> {
+	exists(path: string): CallToolResult {
 		// Validate path
 		if (!PathUtils.isValidVaultPath(path)) {
 			return {
@@ -922,7 +922,7 @@ export class VaultTools {
 	 * Resolve a single wikilink from a source note
 	 * Returns the target path if resolvable, or suggestions if not
 	 */
-	async resolveWikilink(sourcePath: string, linkText: string): Promise<CallToolResult> {
+	resolveWikilink(sourcePath: string, linkText: string): CallToolResult {
 		try {
 			// Normalize and validate source path
 			const normalizedPath = PathUtils.normalizePath(sourcePath);
