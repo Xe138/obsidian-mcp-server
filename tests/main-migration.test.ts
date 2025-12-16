@@ -1,18 +1,53 @@
 import { generateApiKey } from '../src/utils/auth-utils';
-import { encryptApiKey, decryptApiKey } from '../src/utils/encryption-utils';
 import { DEFAULT_SETTINGS } from '../src/types/settings-types';
 
-// Mock electron
-jest.mock('electron', () => ({
-	safeStorage: {
-		isEncryptionAvailable: jest.fn(() => true),
-		encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
-		decryptString: jest.fn((buffer: Buffer) => {
-			const str = buffer.toString();
-			return str.replace('encrypted:', '');
-		})
+// Mock safeStorage implementation
+const mockSafeStorage = {
+	isEncryptionAvailable: jest.fn(() => true),
+	encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
+	decryptString: jest.fn((buffer: Buffer) => buffer.toString().replace('encrypted:', ''))
+};
+
+// Setup window.require mock
+const mockWindowRequire = jest.fn((module: string) => {
+	if (module === 'electron') {
+		return { safeStorage: mockSafeStorage };
 	}
-}));
+	throw new Error(`Module not found: ${module}`);
+});
+
+// Create mock window object for Node environment
+const mockWindow: Window & { require?: unknown } = {
+	require: mockWindowRequire
+} as unknown as Window & { require?: unknown };
+
+// Store original global window
+const originalWindow = (globalThis as unknown as { window?: unknown }).window;
+
+// Set up window.require before tests run
+beforeAll(() => {
+	(globalThis as unknown as { window: typeof mockWindow }).window = mockWindow;
+});
+
+// Clean up after all tests
+afterAll(() => {
+	if (originalWindow === undefined) {
+		delete (globalThis as unknown as { window?: unknown }).window;
+	} else {
+		(globalThis as unknown as { window: typeof originalWindow }).window = originalWindow;
+	}
+});
+
+// Import after mock is set up
+let encryptApiKey: typeof import('../src/utils/encryption-utils').encryptApiKey;
+let decryptApiKey: typeof import('../src/utils/encryption-utils').decryptApiKey;
+
+beforeAll(() => {
+	jest.resetModules();
+	const encryptionUtils = require('../src/utils/encryption-utils');
+	encryptApiKey = encryptionUtils.encryptApiKey;
+	decryptApiKey = encryptionUtils.decryptApiKey;
+});
 
 describe('Settings Migration', () => {
 	describe('API key initialization', () => {

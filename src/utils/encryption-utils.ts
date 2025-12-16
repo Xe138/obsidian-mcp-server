@@ -8,12 +8,14 @@ interface ElectronSafeStorage {
 // Safely import safeStorage - may not be available in all environments
 let safeStorage: ElectronSafeStorage | null = null;
 try {
-	// Using require() is necessary for synchronous access to Electron's safeStorage API in Obsidian desktop plugins
-	// ES6 dynamic imports would create race conditions as this module must be available synchronously
-	// eslint-disable-next-line @typescript-eslint/no-var-requires -- Synchronous Electron API access required for Obsidian plugin
-	const electron = require('electron') as typeof import('electron');
-	safeStorage = electron.safeStorage || null;
-} catch (error) {
+	// Access electron through the global window object in Obsidian's Electron environment
+	// This avoids require() while still getting synchronous access
+	const electronRemote = (window as Window & { require?: (module: string) => typeof import('electron') }).require;
+	if (electronRemote) {
+		const electron = electronRemote('electron');
+		safeStorage = electron.safeStorage || null;
+	}
+} catch {
 	console.warn('Electron safeStorage not available, API keys will be stored in plaintext');
 }
 

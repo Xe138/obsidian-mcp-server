@@ -1,18 +1,63 @@
-import { encryptApiKey, decryptApiKey, isEncryptionAvailable } from '../src/utils/encryption-utils';
+// Mock safeStorage implementation
+const mockSafeStorage = {
+	isEncryptionAvailable: jest.fn(() => true),
+	encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
+	decryptString: jest.fn((buffer: Buffer) => buffer.toString().replace('encrypted:', ''))
+};
 
-// Mock electron module
-jest.mock('electron', () => ({
-	safeStorage: {
-		isEncryptionAvailable: jest.fn(() => true),
-		encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
-		decryptString: jest.fn((buffer: Buffer) => {
-			const str = buffer.toString();
-			return str.replace('encrypted:', '');
-		})
+// Setup window.require mock before importing the module
+const mockWindowRequire = jest.fn((module: string) => {
+	if (module === 'electron') {
+		return { safeStorage: mockSafeStorage };
 	}
-}));
+	throw new Error(`Module not found: ${module}`);
+});
+
+// Create mock window object for Node environment
+const mockWindow: Window & { require?: unknown } = {
+	require: mockWindowRequire
+} as unknown as Window & { require?: unknown };
+
+// Store original global window
+const originalWindow = (globalThis as unknown as { window?: unknown }).window;
+
+// Set up window.require before tests run
+beforeAll(() => {
+	(globalThis as unknown as { window: typeof mockWindow }).window = mockWindow;
+});
+
+// Clean up after all tests
+afterAll(() => {
+	if (originalWindow === undefined) {
+		delete (globalThis as unknown as { window?: unknown }).window;
+	} else {
+		(globalThis as unknown as { window: typeof originalWindow }).window = originalWindow;
+	}
+});
+
+// Import after mock is set up - use require to ensure module loads after mock
+let encryptApiKey: typeof import('../src/utils/encryption-utils').encryptApiKey;
+let decryptApiKey: typeof import('../src/utils/encryption-utils').decryptApiKey;
+let isEncryptionAvailable: typeof import('../src/utils/encryption-utils').isEncryptionAvailable;
+
+beforeAll(() => {
+	// Reset modules to ensure fresh load with mock
+	jest.resetModules();
+	const encryptionUtils = require('../src/utils/encryption-utils');
+	encryptApiKey = encryptionUtils.encryptApiKey;
+	decryptApiKey = encryptionUtils.decryptApiKey;
+	isEncryptionAvailable = encryptionUtils.isEncryptionAvailable;
+});
 
 describe('Encryption Utils', () => {
+	beforeEach(() => {
+		// Reset mock implementations before each test
+		mockSafeStorage.isEncryptionAvailable.mockReturnValue(true);
+		mockSafeStorage.encryptString.mockImplementation((data: string) => Buffer.from(`encrypted:${data}`));
+		mockSafeStorage.decryptString.mockImplementation((buffer: Buffer) => buffer.toString().replace('encrypted:', ''));
+		mockWindowRequire.mockClear();
+	});
+
 	describe('encryptApiKey', () => {
 		it('should encrypt API key when encryption is available', () => {
 			const apiKey = 'test-api-key-12345';
@@ -23,13 +68,23 @@ describe('Encryption Utils', () => {
 		});
 
 		it('should return plaintext when encryption is not available', () => {
-			const { safeStorage } = require('electron');
-			safeStorage.isEncryptionAvailable.mockReturnValueOnce(false);
+			// Need to reload module with different mock behavior
+			jest.resetModules();
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => false),
+				encryptString: jest.fn(),
+				decryptString: jest.fn()
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
+			const { encryptApiKey: encrypt } = require('../src/utils/encryption-utils');
 			const apiKey = 'test-api-key-12345';
-			const result = encryptApiKey(apiKey);
+			const result = encrypt(apiKey);
 
 			expect(result).toBe(apiKey);
+
+			// Restore original mock
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should handle empty string', () => {
@@ -73,92 +128,107 @@ describe('Encryption Utils', () => {
 
 	describe('error handling', () => {
 		it('should handle encryption errors and fallback to plaintext', () => {
-			const { safeStorage } = require('electron');
-			const originalEncrypt = safeStorage.encryptString;
-			safeStorage.encryptString = jest.fn(() => {
-				throw new Error('Encryption failed');
-			});
+			// Reload module with error-throwing mock
+			jest.resetModules();
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => true),
+				encryptString: jest.fn(() => {
+					throw new Error('Encryption failed');
+				}),
+				decryptString: jest.fn()
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
+			const { encryptApiKey: encrypt } = require('../src/utils/encryption-utils');
 			const apiKey = 'test-api-key-12345';
-			const result = encryptApiKey(apiKey);
+			const result = encrypt(apiKey);
 
 			expect(result).toBe(apiKey); // Should return plaintext on error
-			safeStorage.encryptString = originalEncrypt; // Restore
+
+			// Restore original mock
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should throw error when decryption fails', () => {
-			const { safeStorage } = require('electron');
-			const originalDecrypt = safeStorage.decryptString;
-			safeStorage.decryptString = jest.fn(() => {
-				throw new Error('Decryption failed');
-			});
+			// Reload module with error-throwing mock
+			jest.resetModules();
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => true),
+				encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
+				decryptString: jest.fn(() => {
+					throw new Error('Decryption failed');
+				})
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
+			const { decryptApiKey: decrypt } = require('../src/utils/encryption-utils');
 			const encrypted = 'encrypted:aW52YWxpZA=='; // Invalid encrypted data
 
-			expect(() => decryptApiKey(encrypted)).toThrow('Failed to decrypt API key');
-			safeStorage.decryptString = originalDecrypt; // Restore
+			expect(() => decrypt(encrypted)).toThrow('Failed to decrypt API key');
+
+			// Restore original mock
+			mockWindow.require = mockWindowRequire;
 		});
 	});
 
 	describe('isEncryptionAvailable', () => {
 		it('should return true when encryption is available', () => {
-			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
-			const { safeStorage } = require('electron');
+			jest.resetModules();
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => true),
+				encryptString: jest.fn(),
+				decryptString: jest.fn()
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
-			safeStorage.isEncryptionAvailable.mockReturnValueOnce(true);
-			expect(isEncryptionAvailable()).toBe(true);
+			const { isEncryptionAvailable: checkAvail } = require('../src/utils/encryption-utils');
+			expect(checkAvail()).toBe(true);
+
+			// Restore
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should return false when encryption is not available', () => {
-			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
-			const { safeStorage } = require('electron');
+			jest.resetModules();
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => false),
+				encryptString: jest.fn(),
+				decryptString: jest.fn()
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
-			safeStorage.isEncryptionAvailable.mockReturnValueOnce(false);
-			expect(isEncryptionAvailable()).toBe(false);
+			const { isEncryptionAvailable: checkAvail } = require('../src/utils/encryption-utils');
+			expect(checkAvail()).toBe(false);
+
+			// Restore
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should return false when safeStorage is null', () => {
-			// This tests the case where Electron is not available
-			// We need to reload the module with electron unavailable
 			jest.resetModules();
+			mockWindow.require = jest.fn(() => ({ safeStorage: null }));
 
-			jest.mock('electron', () => ({
-				safeStorage: null
-			}));
-
-			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
-			expect(isEncryptionAvailable()).toBe(false);
+			const { isEncryptionAvailable: checkAvail } = require('../src/utils/encryption-utils');
+			expect(checkAvail()).toBe(false);
 
 			// Restore original mock
-			jest.resetModules();
-			jest.mock('electron', () => ({
-				safeStorage: {
-					isEncryptionAvailable: jest.fn(() => true),
-					encryptString: jest.fn((data: string) => Buffer.from(`encrypted:${data}`)),
-					decryptString: jest.fn((buffer: Buffer) => {
-						const str = buffer.toString();
-						return str.replace('encrypted:', '');
-					})
-				}
-			}));
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should return false when isEncryptionAvailable method is missing', () => {
 			jest.resetModules();
+			const mockStorage = {
+				// Missing isEncryptionAvailable method
+				encryptString: jest.fn(),
+				decryptString: jest.fn()
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
-			jest.mock('electron', () => ({
-				safeStorage: {
-					// Missing isEncryptionAvailable method
-					encryptString: jest.fn(),
-					decryptString: jest.fn()
-				}
-			}));
-
-			const { isEncryptionAvailable } = require('../src/utils/encryption-utils');
-			expect(isEncryptionAvailable()).toBe(false);
+			const { isEncryptionAvailable: checkAvail } = require('../src/utils/encryption-utils');
+			expect(checkAvail()).toBe(false);
 
 			// Restore
-			jest.resetModules();
+			mockWindow.require = mockWindowRequire;
 		});
 	});
 
@@ -168,12 +238,13 @@ describe('Encryption Utils', () => {
 		});
 
 		afterEach(() => {
-			jest.resetModules();
+			// Restore mock after each test
+			mockWindow.require = mockWindowRequire;
 		});
 
 		it('should handle electron module not being available', () => {
 			// Mock require to throw when loading electron
-			jest.mock('electron', () => {
+			mockWindow.require = jest.fn(() => {
 				throw new Error('Electron not available');
 			});
 
@@ -181,12 +252,12 @@ describe('Encryption Utils', () => {
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
 			// Load module with electron unavailable
-			const { encryptApiKey, isEncryptionAvailable } = require('../src/utils/encryption-utils');
+			const { encryptApiKey: encrypt, isEncryptionAvailable: checkAvail } = require('../src/utils/encryption-utils');
 
-			expect(isEncryptionAvailable()).toBe(false);
+			expect(checkAvail()).toBe(false);
 
 			const apiKey = 'test-key';
-			const result = encryptApiKey(apiKey);
+			const result = encrypt(apiKey);
 
 			// Should return plaintext when electron is unavailable
 			expect(result).toBe(apiKey);
@@ -195,21 +266,19 @@ describe('Encryption Utils', () => {
 		});
 
 		it('should handle decryption when safeStorage is null', () => {
-			jest.mock('electron', () => ({
-				safeStorage: null
-			}));
+			mockWindow.require = jest.fn(() => ({ safeStorage: null }));
 
-			const { decryptApiKey } = require('../src/utils/encryption-utils');
+			const { decryptApiKey: decrypt } = require('../src/utils/encryption-utils');
 
 			const encrypted = 'encrypted:aW52YWxpZA==';
 
-			expect(() => decryptApiKey(encrypted)).toThrow('Failed to decrypt API key');
+			expect(() => decrypt(encrypted)).toThrow('Failed to decrypt API key');
 		});
 
 		it('should log warning when encryption not available on first load', () => {
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-			jest.mock('electron', () => {
+			mockWindow.require = jest.fn(() => {
 				throw new Error('Module not found');
 			});
 
@@ -225,35 +294,32 @@ describe('Encryption Utils', () => {
 		});
 
 		it('should gracefully handle plaintext keys when encryption unavailable', () => {
-			jest.mock('electron', () => ({
-				safeStorage: null
-			}));
+			mockWindow.require = jest.fn(() => ({ safeStorage: null }));
 
-			const { encryptApiKey, decryptApiKey } = require('../src/utils/encryption-utils');
+			const { encryptApiKey: encrypt, decryptApiKey: decrypt } = require('../src/utils/encryption-utils');
 
 			const apiKey = 'plain-api-key';
 
 			// Encrypt should return plaintext
-			const encrypted = encryptApiKey(apiKey);
+			const encrypted = encrypt(apiKey);
 			expect(encrypted).toBe(apiKey);
 
 			// Decrypt plaintext should return as-is
-			const decrypted = decryptApiKey(apiKey);
+			const decrypted = decrypt(apiKey);
 			expect(decrypted).toBe(apiKey);
 		});
 
 		it('should warn when falling back to plaintext storage', () => {
 			const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-			jest.mock('electron', () => ({
-				safeStorage: {
-					isEncryptionAvailable: jest.fn(() => false)
-				}
-			}));
+			const mockStorage = {
+				isEncryptionAvailable: jest.fn(() => false)
+			};
+			mockWindow.require = jest.fn(() => ({ safeStorage: mockStorage }));
 
-			const { encryptApiKey } = require('../src/utils/encryption-utils');
+			const { encryptApiKey: encrypt } = require('../src/utils/encryption-utils');
 
-			encryptApiKey('test-key');
+			encrypt('test-key');
 
 			expect(consoleSpy).toHaveBeenCalledWith(
 				expect.stringContaining('Encryption not available')
