@@ -38,9 +38,9 @@ export class MCPServer {
 		try {
 			switch (request.method) {
 				case 'initialize':
-					return this.createSuccessResponse(request.id, await this.handleInitialize(request.params ?? {}));
+					return this.createSuccessResponse(request.id, this.handleInitialize(request.params ?? {}));
 				case 'tools/list':
-					return this.createSuccessResponse(request.id, await this.handleListTools());
+					return this.createSuccessResponse(request.id, this.handleListTools());
 				case 'tools/call':
 					return this.createSuccessResponse(request.id, await this.handleCallTool(request.params ?? {}));
 				case 'ping':
@@ -54,7 +54,7 @@ export class MCPServer {
 		}
 	}
 
-	private async handleInitialize(_params: JSONRPCParams): Promise<InitializeResult> {
+	private handleInitialize(_params: JSONRPCParams): InitializeResult {
 		return {
 			protocolVersion: "2024-11-05",
 			capabilities: {
@@ -67,15 +67,14 @@ export class MCPServer {
 		};
 	}
 
-	private async handleListTools(): Promise<ListToolsResult> {
+	private handleListTools(): ListToolsResult {
 		return {
 			tools: this.toolRegistry.getToolDefinitions()
 		};
 	}
 
 	private async handleCallTool(params: JSONRPCParams): Promise<CallToolResult> {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and need runtime validation
-		const paramsObj = params as { name: string; arguments: any };
+		const paramsObj = params as { name: string; arguments: Record<string, unknown> };
 		return await this.toolRegistry.callTool(paramsObj.name, paramsObj.arguments);
 	}
 
@@ -114,7 +113,7 @@ export class MCPServer {
 					}
 				});
 			} catch (error) {
-				reject(error);
+				reject(error instanceof Error ? error : new Error(String(error)));
 			}
 		});
 	}
