@@ -5,6 +5,7 @@ import { VaultTools } from './vault-tools';
 import { createNoteTools } from './note-tools-factory';
 import { createVaultTools } from './vault-tools-factory';
 import { NotificationManager } from '../ui/notifications';
+import { YAMLValue } from '../utils/frontmatter-utils';
 
 export class ToolRegistry {
 	private noteTools: NoteTools;
@@ -474,8 +475,7 @@ export class ToolRegistry {
 		];
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Tool arguments come from JSON-RPC and require runtime validation
-	async callTool(name: string, args: any): Promise<CallToolResult> {
+	async callTool(name: string, args: Record<string, unknown>): Promise<CallToolResult> {
 		const startTime = Date.now();
 		
 		// Show tool call notification
@@ -487,124 +487,160 @@ export class ToolRegistry {
 			let result: CallToolResult;
 			
 			switch (name) {
-				case "read_note":
-					result = await this.noteTools.readNote(args.path, {
-						withFrontmatter: args.withFrontmatter,
-						withContent: args.withContent,
-						parseFrontmatter: args.parseFrontmatter
+				case "read_note": {
+					const a = args as { path: string; withFrontmatter?: boolean; withContent?: boolean; parseFrontmatter?: boolean };
+					result = await this.noteTools.readNote(a.path, {
+						withFrontmatter: a.withFrontmatter,
+						withContent: a.withContent,
+						parseFrontmatter: a.parseFrontmatter
 					});
 					break;
-				case "create_note":
+				}
+				case "create_note": {
+					const a = args as { path: string; content: string; createParents?: boolean; onConflict?: 'error' | 'overwrite' | 'rename'; validateLinks?: boolean };
 					result = await this.noteTools.createNote(
-						args.path,
-						args.content,
-						args.createParents ?? false,
-						args.onConflict ?? 'error',
-						args.validateLinks ?? true
+						a.path,
+						a.content,
+						a.createParents ?? false,
+						a.onConflict ?? 'error',
+						a.validateLinks ?? true
 					);
 					break;
-				case "update_note":
+				}
+				case "update_note": {
+					const a = args as { path: string; content: string; validateLinks?: boolean };
 					result = await this.noteTools.updateNote(
-						args.path,
-						args.content,
-						args.validateLinks ?? true
+						a.path,
+						a.content,
+						a.validateLinks ?? true
 					);
 					break;
-				case "update_frontmatter":
+				}
+				case "update_frontmatter": {
+					const a = args as { path: string; patch?: Record<string, YAMLValue>; remove?: string[]; ifMatch?: string };
 					result = await this.noteTools.updateFrontmatter(
-						args.path,
-						args.patch,
-						args.remove ?? [],
-						args.ifMatch
+						a.path,
+						a.patch,
+						a.remove ?? [],
+						a.ifMatch
 					);
 					break;
-				case "update_sections":
+				}
+				case "update_sections": {
+					const a = args as { path: string; edits: Array<{ startLine: number; endLine: number; content: string }>; ifMatch?: string; validateLinks?: boolean };
 					result = await this.noteTools.updateSections(
-						args.path,
-						args.edits,
-						args.ifMatch,
-						args.validateLinks ?? true
+						a.path,
+						a.edits,
+						a.ifMatch,
+						a.validateLinks ?? true
 					);
 					break;
-				case "rename_file":
+				}
+				case "rename_file": {
+					const a = args as { path: string; newPath: string; updateLinks?: boolean; ifMatch?: string };
 					result = await this.noteTools.renameFile(
-						args.path,
-						args.newPath,
-						args.updateLinks ?? true,
-						args.ifMatch
+						a.path,
+						a.newPath,
+						a.updateLinks ?? true,
+						a.ifMatch
 					);
 					break;
-				case "delete_note":
+				}
+				case "delete_note": {
+					const a = args as { path: string; soft?: boolean; dryRun?: boolean; ifMatch?: string };
 					result = await this.noteTools.deleteNote(
-						args.path,
-						args.soft ?? true,
-						args.dryRun ?? false,
-						args.ifMatch
+						a.path,
+						a.soft ?? true,
+						a.dryRun ?? false,
+						a.ifMatch
 					);
 					break;
-				case "search":
+				}
+				case "search": {
+					const a = args as { query: string; isRegex?: boolean; caseSensitive?: boolean; includes?: string[]; excludes?: string[]; folder?: string; returnSnippets?: boolean; snippetLength?: number; maxResults?: number };
 					result = await this.vaultTools.search({
-						query: args.query,
-						isRegex: args.isRegex,
-						caseSensitive: args.caseSensitive,
-						includes: args.includes,
-						excludes: args.excludes,
-						folder: args.folder,
-						returnSnippets: args.returnSnippets,
-						snippetLength: args.snippetLength,
-						maxResults: args.maxResults
+						query: a.query,
+						isRegex: a.isRegex,
+						caseSensitive: a.caseSensitive,
+						includes: a.includes,
+						excludes: a.excludes,
+						folder: a.folder,
+						returnSnippets: a.returnSnippets,
+						snippetLength: a.snippetLength,
+						maxResults: a.maxResults
 					});
 					break;
-				case "search_waypoints":
-					result = await this.vaultTools.searchWaypoints(args.folder);
+				}
+				case "search_waypoints": {
+					const a = args as { folder?: string };
+					result = await this.vaultTools.searchWaypoints(a.folder);
 					break;
+				}
 				case "get_vault_info":
 					result = await this.vaultTools.getVaultInfo();
 					break;
-				case "list":
+				case "list": {
+					const a = args as { path?: string; recursive?: boolean; includes?: string[]; excludes?: string[]; only?: 'files' | 'directories' | 'any'; limit?: number; cursor?: string; withFrontmatterSummary?: boolean; includeWordCount?: boolean };
 					result = await this.vaultTools.list({
-						path: args.path,
-						recursive: args.recursive,
-						includes: args.includes,
-						excludes: args.excludes,
-						only: args.only,
-						limit: args.limit,
-						cursor: args.cursor,
-						withFrontmatterSummary: args.withFrontmatterSummary,
-						includeWordCount: args.includeWordCount
+						path: a.path,
+						recursive: a.recursive,
+						includes: a.includes,
+						excludes: a.excludes,
+						only: a.only,
+						limit: a.limit,
+						cursor: a.cursor,
+						withFrontmatterSummary: a.withFrontmatterSummary,
+						includeWordCount: a.includeWordCount
 					});
 					break;
-				case "stat":
-					result = await this.vaultTools.stat(args.path, args.includeWordCount);
+				}
+				case "stat": {
+					const a = args as { path: string; includeWordCount?: boolean };
+					result = await this.vaultTools.stat(a.path, a.includeWordCount);
 					break;
-				case "exists":
-					result = await this.vaultTools.exists(args.path);
+				}
+				case "exists": {
+					const a = args as { path: string };
+					result = await this.vaultTools.exists(a.path);
 					break;
-				case "read_excalidraw":
-					result = await this.noteTools.readExcalidraw(args.path, {
-						includeCompressed: args.includeCompressed,
-						includePreview: args.includePreview
+				}
+				case "read_excalidraw": {
+					const a = args as { path: string; includeCompressed?: boolean; includePreview?: boolean };
+					result = await this.noteTools.readExcalidraw(a.path, {
+						includeCompressed: a.includeCompressed,
+						includePreview: a.includePreview
 					});
 					break;
-				case "get_folder_waypoint":
-					result = await this.vaultTools.getFolderWaypoint(args.path);
+				}
+				case "get_folder_waypoint": {
+					const a = args as { path: string };
+					result = await this.vaultTools.getFolderWaypoint(a.path);
 					break;
-				case "is_folder_note":
-					result = await this.vaultTools.isFolderNote(args.path);
+				}
+				case "is_folder_note": {
+					const a = args as { path: string };
+					result = await this.vaultTools.isFolderNote(a.path);
 					break;
-				case "validate_wikilinks":
-					result = await this.vaultTools.validateWikilinks(args.path);
+				}
+				case "validate_wikilinks": {
+					const a = args as { path: string };
+					result = await this.vaultTools.validateWikilinks(a.path);
 					break;
-				case "resolve_wikilink":
-					result = await this.vaultTools.resolveWikilink(args.sourcePath, args.linkText);
+				}
+				case "resolve_wikilink": {
+					const a = args as { sourcePath: string; linkText: string };
+					result = await this.vaultTools.resolveWikilink(a.sourcePath, a.linkText);
 					break;
-				case "backlinks":
+				}
+				case "backlinks": {
+					const a = args as { path: string; includeUnlinked?: boolean; includeSnippets?: boolean };
 					result = await this.vaultTools.getBacklinks(
-						args.path,
-						args.includeUnlinked ?? false,
-						args.includeSnippets ?? true
+						a.path,
+						a.includeUnlinked ?? false,
+						a.includeSnippets ?? true
 					);
 					break;
+				}
 				default:
 					result = {
 						content: [{ type: "text", text: `Unknown tool: ${name}` }],
