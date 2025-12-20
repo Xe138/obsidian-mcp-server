@@ -587,7 +587,8 @@ export class NoteTools {
 			// Dry run - just return what would happen
 			if (dryRun) {
 				if (soft) {
-					destination = `.trash/${file.name}`;
+					// Destination depends on user's configured deletion preference
+					destination = 'trash';
 				}
 				
 				const result: DeleteNoteResult = {
@@ -603,14 +604,13 @@ export class NoteTools {
 				};
 			}
 
-			// Perform actual deletion
+			// Perform actual deletion using user's preferred trash settings
+			// FileManager.trashFile() respects the user's configured deletion preference
+			// (system trash or .trash/ folder) as set in Obsidian settings
+			await this.fileManager.trashFile(file);
 			if (soft) {
-				// Move to trash using Obsidian's trash method
-				await this.vault.trash(file, true);
-				destination = `.trash/${file.name}`;
-			} else {
-				// Delete using user's preferred trash settings (system trash or .trash/ folder)
-				await this.fileManager.trashFile(file);
+				// For soft delete, indicate the file was moved to trash (location depends on user settings)
+				destination = 'trash';
 			}
 
 			const result: DeleteNoteResult = {

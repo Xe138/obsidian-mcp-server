@@ -163,7 +163,7 @@ export class NotificationManager {
 				keyParams.push(`folder: "${this.truncateString(args.folder, 30)}"`);
 			}
 			if (args.recursive !== undefined) {
-				keyParams.push(`recursive: ${args.recursive}`);
+				keyParams.push(`recursive: ${String(args.recursive)}`);
 			}
 
 			// If no key params, show first 50 chars of JSON
