@@ -10,6 +10,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.1.4] - 2025-12-20
+
+### Fixed
+- **Template Literal Type Safety**: Fixed type error in `notifications.ts` where `args.recursive` could produce `[object Object]` when stringified
+  - Added explicit `String()` coercion for unknown types in template literals
+
+- **File Deletion API**: Replaced `Vault.trash()` with `FileManager.trashFile()` per Obsidian guidelines
+  - All file deletions now respect user's configured deletion preference (system trash or `.trash/` folder)
+  - Removed unused `trash()` method from `IVaultAdapter` interface and `VaultAdapter` class
+  - Both soft and regular delete operations now use the same user-preferred deletion method
+
+### Changed
+- `delete_note` destination field now returns `'trash'` instead of `.trash/{filename}` since actual location depends on user settings
+
+---
+
 ## [1.1.3] - 2025-12-16
 
 ### Fixed
