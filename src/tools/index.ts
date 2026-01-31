@@ -187,11 +187,15 @@ export class ToolRegistry {
 						},
 						ifMatch: {
 							type: "string",
-							description: "Optional ETag/versionId for concurrency control. If provided, update only proceeds if file hasn't been modified. Get versionId from read operations. Prevents conflicting edits in concurrent scenarios."
+							description: "Required: ETag/versionId for concurrency control. Get this from read_note response (always included). Update only proceeds if file hasn't changed since read. Omit only with force:true."
 						},
 						validateLinks: {
 							type: "boolean",
 							description: "If true (default), automatically validate all wikilinks and embeds in the entire note after applying section edits, returning detailed broken link information. If false, skip link validation for better performance. Link validation checks [[wikilinks]], [[note#heading]] links, and ![[embeds]]. Default: true"
+						},
+						force: {
+							type: "boolean",
+							description: "If true, skip version check and apply edits without ifMatch. Use only when you intentionally want to overwrite without checking for concurrent changes. Not recommended. Default: false"
 						}
 					},
 					required: ["path", "edits"]
@@ -532,12 +536,13 @@ export class ToolRegistry {
 					break;
 				}
 				case "update_sections": {
-					const a = args as { path: string; edits: Array<{ startLine: number; endLine: number; content: string }>; ifMatch?: string; validateLinks?: boolean };
+					const a = args as { path: string; edits: Array<{ startLine: number; endLine: number; content: string }>; ifMatch?: string; validateLinks?: boolean; force?: boolean };
 					result = await this.noteTools.updateSections(
 						a.path,
 						a.edits,
 						a.ifMatch,
-						a.validateLinks ?? true
+						a.validateLinks ?? true,
+						a.force ?? false
 					);
 					break;
 				}
