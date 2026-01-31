@@ -34,6 +34,7 @@ export class NoteTools {
 			withFrontmatter?: boolean;
 			withContent?: boolean;
 			parseFrontmatter?: boolean;
+			withLineNumbers?: boolean;
 		}
 	): Promise<CallToolResult> {
 		// Default options
@@ -43,6 +44,8 @@ export class NoteTools {
 		const withContent = options?.withContent ?? true;
 		/* istanbul ignore next */
 		const parseFrontmatter = options?.parseFrontmatter ?? false;
+		/* istanbul ignore next */
+		const withLineNumbers = options?.withLineNumbers ?? false;
 
 		// Validate path
 		if (!path || path.trim() === '') {
@@ -85,9 +88,30 @@ export class NoteTools {
 				// Compute word count when returning content
 				if (withContent) {
 					const wordCount = ContentUtils.countWords(content);
+					const versionId = VersionUtils.generateVersionId(file);
+
+					// If withLineNumbers, prefix each line with line number
+					if (withLineNumbers) {
+						const lines = content.split('\n');
+						const numberedContent = lines
+							.map((line, idx) => `${idx + 1}→${line}`)
+							.join('\n');
+
+						const result = {
+							content: numberedContent,
+							totalLines: lines.length,
+							versionId,
+							wordCount
+						};
+						return {
+							content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+						};
+					}
+
 					const result = {
 						content,
-						wordCount
+						wordCount,
+						versionId
 					};
 					return {
 						content: [{ type: "text", text: JSON.stringify(result, null, 2) }]

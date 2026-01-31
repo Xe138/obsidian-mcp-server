@@ -221,8 +221,8 @@ describe('NoteTools', () => {
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.content).toBe('1→# Title\n2→\n3→Paragraph text\n4→More text');
 			expect(parsed.totalLines).toBe(4);
-			expect(parsed.versionId).toBe('2000-100');
-			expect(parsed.wordCount).toBe(4); // Title Paragraph text More text
+			expect(parsed.versionId).toBe('AXrGSV5GxqntccmzWCNwe7'); // SHA-256 hash of "2000-100"
+			expect(parsed.wordCount).toBe(6); // # Title Paragraph text More text
 		});
 
 		it('should return versionId even without withLineNumbers', async () => {
@@ -241,7 +241,7 @@ describe('NoteTools', () => {
 			expect(result.isError).toBeUndefined();
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.content).toBe('# Test');
-			expect(parsed.versionId).toBe('2000-100');
+			expect(parsed.versionId).toBe('AXrGSV5GxqntccmzWCNwe7'); // SHA-256 hash of "2000-100"
 		});
 	});
 
