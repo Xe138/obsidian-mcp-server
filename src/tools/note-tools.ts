@@ -905,7 +905,8 @@ export class NoteTools {
 		path: string,
 		edits: SectionEdit[],
 		ifMatch?: string,
-		validateLinks: boolean = true
+		validateLinks: boolean = true,
+		force: boolean = false
 	): Promise<CallToolResult> {
 		// Validate path
 		if (!path || path.trim() === '') {
@@ -926,6 +927,20 @@ export class NoteTools {
 		if (!edits || edits.length === 0) {
 			return {
 				content: [{ type: "text", text: JSON.stringify({ error: 'No edits provided' }, null, 2) }],
+				isError: true
+			};
+		}
+
+		// Require ifMatch unless force is true
+		if (!ifMatch && !force) {
+			return {
+				content: [{
+					type: "text",
+					text: JSON.stringify({
+						error: 'Version check required',
+						message: 'The ifMatch parameter is required to prevent overwriting concurrent changes. First call read_note with withLineNumbers:true to get the versionId, then pass it as ifMatch. To bypass this check, set force:true (not recommended).'
+					}, null, 2)
+				}],
 				isError: true
 			};
 		}

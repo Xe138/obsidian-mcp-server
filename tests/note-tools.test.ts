@@ -933,7 +933,7 @@ Some text
 
 			const result = await noteTools.updateSections('test.md', [
 				{ startLine: 2, endLine: 3, content: 'New Line 2\nNew Line 3' }
-			]);
+			], undefined, true, true); // validateLinks=true, force=true
 
 			expect(result.isError).toBeUndefined();
 			expect(mockVault.modify).toHaveBeenCalled();
@@ -958,7 +958,7 @@ Some text
 
 			const result = await noteTools.updateSections('test.md', [
 				{ startLine: 1, endLine: 10, content: 'New' }
-			]);
+			], undefined, true, true); // validateLinks=true, force=true
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('Invalid line range');
@@ -993,7 +993,7 @@ Some text
 
 			const result = await noteTools.updateSections('test.md', [
 				{ startLine: 1, endLine: 1, content: 'New' }
-			]);
+			], undefined, true, true); // validateLinks=true, force=true
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('Update error');
@@ -1005,7 +1005,7 @@ Some text
 
 			const result = await noteTools.updateSections('nonexistent.md', [
 				{ startLine: 1, endLine: 1, content: 'New' }
-			]);
+			], undefined, true, true); // validateLinks=true, force=true
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('not found');
@@ -1017,7 +1017,7 @@ Some text
 
 			const result = await noteTools.updateSections('folder', [
 				{ startLine: 1, endLine: 1, content: 'New' }
-			]);
+			], undefined, true, true); // validateLinks=true, force=true
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('not a file');
@@ -1365,7 +1365,7 @@ Some text
 				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
 				mockVault.modify = jest.fn().mockResolvedValue(undefined);
 
-				const result = await noteTools.updateSections('sections-test.md', edits);
+				const result = await noteTools.updateSections('sections-test.md', edits, undefined, true, true); // validateLinks=true, force=true
 
 				expect(result.isError).toBeFalsy();
 				const parsed = JSON.parse(result.content[0].text);
@@ -1381,7 +1381,7 @@ Some text
 				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
 				mockVault.modify = jest.fn().mockResolvedValue(undefined);
 
-				const result = await noteTools.updateSections('sections-test.md', edits);
+				const result = await noteTools.updateSections('sections-test.md', edits, undefined, true, true); // validateLinks=true, force=true
 
 				expect(result.isError).toBeFalsy();
 				const parsed = JSON.parse(result.content[0].text);
@@ -1398,7 +1398,7 @@ Some text
 				mockVault.read = jest.fn().mockResolvedValue('Line 1\nLine 2\nLine 3');
 				mockVault.modify = jest.fn().mockResolvedValue(undefined);
 
-				const result = await noteTools.updateSections('sections-test.md', edits, undefined, false);
+				const result = await noteTools.updateSections('sections-test.md', edits, undefined, false, true); // validateLinks=false, force=true
 
 				expect(result.isError).toBeFalsy();
 				const parsed = JSON.parse(result.content[0].text);
