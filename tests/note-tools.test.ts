@@ -203,6 +203,46 @@ describe('NoteTools', () => {
 			expect(parsed.content).toBe(content);
 			expect(parsed.wordCount).toBe(5); // Test Note Content here
 		});
+
+		it('should return numbered lines when withLineNumbers is true', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = '# Title\n\nParagraph text\nMore text';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { withLineNumbers: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe('1→# Title\n2→\n3→Paragraph text\n4→More text');
+			expect(parsed.totalLines).toBe(4);
+			expect(parsed.versionId).toBe('2000-100');
+			expect(parsed.wordCount).toBe(4); // Title Paragraph text More text
+		});
+
+		it('should return versionId even without withLineNumbers', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = '# Test';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md');
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe('# Test');
+			expect(parsed.versionId).toBe('2000-100');
+		});
 	});
 
 	describe('createNote', () => {
