@@ -28,7 +28,7 @@ export class ToolRegistry {
 		return [
 			{
 				name: "read_note",
-				description: "Read the content of a file from the Obsidian vault with optional frontmatter parsing. Returns word count (excluding frontmatter and Obsidian comments) when content is included in the response. Use this to read the contents of a specific note or file. Path must be vault-relative (no leading slash) and include the file extension. Use list() first if you're unsure of the exact path. This only works on files, not folders. By default returns raw content with word count. Set parseFrontmatter to true to get structured data with separated frontmatter, content, and word count.",
+				description: "Read the content of a file from the Obsidian vault with optional frontmatter parsing. Returns versionId for concurrency control. When withLineNumbers is true, prefixes each line with its number (e.g., '1→content') for use with update_sections. Returns word count (excluding frontmatter and Obsidian comments) when content is included. Path must be vault-relative (no leading slash) and include the file extension. Use list() first if you're unsure of the exact path.",
 				inputSchema: {
 					type: "object",
 					properties: {
@@ -47,6 +47,10 @@ export class ToolRegistry {
 						parseFrontmatter: {
 							type: "boolean",
 							description: "If true, parse and separate frontmatter from content, returning structured JSON. If false (default), return raw file content as plain text. Use true when you need to work with frontmatter separately."
+						},
+						withLineNumbers: {
+							type: "boolean",
+							description: "If true, prefix each line with its line number (e.g., '1→content'). Use this when you need to make line-based edits with update_sections. Returns totalLines count and versionId for use with ifMatch parameter. Default: false"
 						}
 					},
 					required: ["path"]
@@ -488,11 +492,12 @@ export class ToolRegistry {
 			
 			switch (name) {
 				case "read_note": {
-					const a = args as { path: string; withFrontmatter?: boolean; withContent?: boolean; parseFrontmatter?: boolean };
+					const a = args as { path: string; withFrontmatter?: boolean; withContent?: boolean; parseFrontmatter?: boolean; withLineNumbers?: boolean };
 					result = await this.noteTools.readNote(a.path, {
 						withFrontmatter: a.withFrontmatter,
 						withContent: a.withContent,
-						parseFrontmatter: a.parseFrontmatter
+						parseFrontmatter: a.parseFrontmatter,
+						withLineNumbers: a.withLineNumbers
 					});
 					break;
 				}
