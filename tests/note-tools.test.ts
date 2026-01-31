@@ -1022,6 +1022,77 @@ Some text
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain('not a file');
 		});
+
+		it('should return error when ifMatch not provided and force not set', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = 'Line 1\nLine 2';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+			mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+			const result = await noteTools.updateSections('test.md', [
+				{ startLine: 1, endLine: 1, content: 'New' }
+			]);
+
+			expect(result.isError).toBe(true);
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.error).toBe('Version check required');
+			expect(parsed.message).toContain('ifMatch parameter is required');
+			expect(mockVault.modify).not.toHaveBeenCalled();
+		});
+
+		it('should proceed without ifMatch when force is true', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = 'Line 1\nLine 2';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+			mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+			const result = await noteTools.updateSections(
+				'test.md',
+				[{ startLine: 1, endLine: 1, content: 'New Line 1' }],
+				undefined, // no ifMatch
+				true,      // validateLinks
+				true       // force
+			);
+
+			expect(result.isError).toBeUndefined();
+			expect(mockVault.modify).toHaveBeenCalled();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.success).toBe(true);
+		});
+
+		it('should proceed with valid ifMatch without force', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = 'Line 1\nLine 2';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+			mockVault.modify = jest.fn().mockResolvedValue(undefined);
+
+			const result = await noteTools.updateSections(
+				'test.md',
+				[{ startLine: 1, endLine: 1, content: 'New Line 1' }],
+				'AXrGSV5GxqntccmzWCNwe7' // valid ifMatch (SHA-256 hash of "2000-100")
+			);
+
+			expect(result.isError).toBeUndefined();
+			expect(mockVault.modify).toHaveBeenCalled();
+		});
 	});
 
 	describe('path validation', () => {
