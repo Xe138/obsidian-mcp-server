@@ -114,7 +114,7 @@ export class SearchUtils {
 					filesWithMatches.add(file.path);
 					matches.push(...filenameMatches);
 				}
-			} catch (error) {
+			} catch {
 				// Skip files that can't be read
 			}
 		}
@@ -323,7 +323,7 @@ export class SearchUtils {
 						waypointContent.push(line);
 					}
 				}
-			} catch (error) {
+			} catch {
 				// Skip files that can't be searched
 			}
 		}

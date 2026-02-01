@@ -73,7 +73,7 @@ export class FrontmatterUtils {
 		let parsedFrontmatter: Record<string, YAMLValue> | null = null;
 		try {
 			parsedFrontmatter = parseYaml(frontmatter) || {};
-		} catch (error) {
+		} catch {
 			// If parsing fails, return null for parsed frontmatter
 			parsedFrontmatter = null;
 		}
@@ -326,7 +326,7 @@ export class FrontmatterUtils {
 							compressed: true // Indicate data is compressed
 						}
 					};
-				} catch (decompressError) {
+				} catch {
 					// Decompression failed
 					return {
 						isExcalidraw: true,
@@ -355,9 +355,9 @@ export class FrontmatterUtils {
 					version: jsonData.version || 2
 				}
 			};
-		} catch (error) {
+		} catch {
 			// If parsing fails, return with default values
-			const isExcalidraw = content.includes('excalidraw-plugin') || 
+			const isExcalidraw = content.includes('excalidraw-plugin') ||
 								 content.includes('"type":"excalidraw"');
 
 

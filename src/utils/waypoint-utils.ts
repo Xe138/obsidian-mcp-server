@@ -100,7 +100,7 @@ export class WaypointUtils {
 		try {
 			const content = await vault.read(file);
 			hasWaypoint = this.hasWaypointMarker(content);
-		} catch (error) {
+		} catch {
 			// If we can't read the file, we can't check for waypoints
 		}
 

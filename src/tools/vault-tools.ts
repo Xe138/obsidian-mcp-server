@@ -286,7 +286,7 @@ export class VaultTools {
 						try {
 							const content = await this.vault.read(item);
 							fileMetadata.wordCount = ContentUtils.countWords(content);
-						} catch (error) {
+						} catch {
 							// Skip word count if file can't be read (binary file, etc.)
 							// wordCount field simply omitted for this file
 						}
@@ -356,7 +356,7 @@ export class VaultTools {
 					frontmatterSummary: summary
 				};
 			}
-		} catch (error) {
+		} catch {
 			// If frontmatter extraction fails, just return base metadata
 		}
 
@@ -390,7 +390,7 @@ export class VaultTools {
 			if (folderWithStat.stat && typeof folderWithStat.stat.mtime === 'number') {
 				modified = folderWithStat.stat.mtime;
 			}
-		} catch (error) {
+		} catch {
 			// Silently fail - modified will remain 0
 		}
 		
@@ -442,7 +442,7 @@ export class VaultTools {
 				try {
 					const content = await this.vault.read(item);
 					metadata.wordCount = ContentUtils.countWords(content);
-				} catch (error) {
+				} catch {
 					// Skip word count if file can't be read (binary file, etc.)
 				}
 			}
@@ -712,7 +712,7 @@ export class VaultTools {
 							}
 						}
 					}
-				} catch (error) {
+				} catch {
 					// Skip files that can't be read
 				}
 			}
