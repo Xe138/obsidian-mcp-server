@@ -50,7 +50,7 @@ export class ToolRegistry {
 						},
 						withLineNumbers: {
 							type: "boolean",
-							description: "If true, prefix each line with its line number (e.g., '1→content'). Use this when you need to make line-based edits with update_sections. Returns totalLines count and versionId for use with ifMatch parameter. Default: false"
+							description: "If true (default), prefix each line with its line number (e.g., '1→content'). This helps AI assistants reference specific line numbers when discussing notes. Returns totalLines count and versionId for use with ifMatch parameter. Set to false to get raw content without line prefixes. Default: true"
 						}
 					},
 					required: ["path"]

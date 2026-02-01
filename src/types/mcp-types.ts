@@ -218,6 +218,7 @@ export interface ParsedNote {
 	content: string;
 	contentWithoutFrontmatter?: string;
 	wordCount?: number;
+	totalLines?: number;
 }
 
 /**

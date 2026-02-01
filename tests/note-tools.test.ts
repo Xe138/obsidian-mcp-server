@@ -52,7 +52,7 @@ describe('NoteTools', () => {
 	});
 
 	describe('readNote', () => {
-		it('should read note content successfully', async () => {
+		it('should read note content successfully with line numbers by default', async () => {
 			const mockFile = createMockTFile('test.md');
 			const content = '# Test Note\n\nThis is test content.';
 
@@ -62,9 +62,10 @@ describe('NoteTools', () => {
 			const result = await noteTools.readNote('test.md');
 
 			expect(result.isError).toBeUndefined();
-			// Now returns JSON with content and wordCount
+			// Now returns JSON with content (line-numbered by default) and wordCount
 			const parsed = JSON.parse(result.content[0].text);
-			expect(parsed.content).toBe(content);
+			expect(parsed.content).toBe('1→# Test Note\n2→\n3→This is test content.');
+			expect(parsed.totalLines).toBe(3);
 			expect(parsed.wordCount).toBe(7); // Test Note This is test content
 			expect(mockVault.read).toHaveBeenCalledWith(mockFile);
 		});
@@ -124,7 +125,7 @@ describe('NoteTools', () => {
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
 			mockVault.read = jest.fn().mockResolvedValue(content);
 
-			const result = await noteTools.readNote('test.md', { withContent: true });
+			const result = await noteTools.readNote('test.md', { withContent: true, withLineNumbers: false });
 
 			expect(result.isError).toBeUndefined();
 			const parsed = JSON.parse(result.content[0].text);
@@ -188,23 +189,23 @@ describe('NoteTools', () => {
 			expect(parsed.wordCount).toBe(0);
 		});
 
-		it('should return JSON format even with default options', async () => {
+		it('should return JSON format with raw content when withLineNumbers is false', async () => {
 			const mockFile = createMockTFile('test.md');
 			const content = '# Test Note\n\nContent here.';
 
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
 			mockVault.read = jest.fn().mockResolvedValue(content);
 
-			const result = await noteTools.readNote('test.md');
+			const result = await noteTools.readNote('test.md', { withLineNumbers: false });
 
 			expect(result.isError).toBeUndefined();
-			// Now returns JSON even with default options
+			// Returns JSON with raw content when line numbers disabled
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.content).toBe(content);
 			expect(parsed.wordCount).toBe(5); // Test Note Content here
 		});
 
-		it('should return numbered lines when withLineNumbers is true', async () => {
+		it('should return numbered lines by default', async () => {
 			const mockFile = createMockTFile('test.md', {
 				ctime: 1000,
 				mtime: 2000,
@@ -215,7 +216,7 @@ describe('NoteTools', () => {
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
 			mockVault.read = jest.fn().mockResolvedValue(content);
 
-			const result = await noteTools.readNote('test.md', { withLineNumbers: true });
+			const result = await noteTools.readNote('test.md');
 
 			expect(result.isError).toBeUndefined();
 			const parsed = JSON.parse(result.content[0].text);
@@ -225,7 +226,7 @@ describe('NoteTools', () => {
 			expect(parsed.wordCount).toBe(6); // # Title Paragraph text More text
 		});
 
-		it('should return versionId even without withLineNumbers', async () => {
+		it('should return raw content when withLineNumbers is false', async () => {
 			const mockFile = createMockTFile('test.md', {
 				ctime: 1000,
 				mtime: 2000,
@@ -236,12 +237,51 @@ describe('NoteTools', () => {
 			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
 			mockVault.read = jest.fn().mockResolvedValue(content);
 
-			const result = await noteTools.readNote('test.md');
+			const result = await noteTools.readNote('test.md', { withLineNumbers: false });
 
 			expect(result.isError).toBeUndefined();
 			const parsed = JSON.parse(result.content[0].text);
 			expect(parsed.content).toBe('# Test');
+			expect(parsed.totalLines).toBeUndefined();
 			expect(parsed.versionId).toBe('AXrGSV5GxqntccmzWCNwe7'); // SHA-256 hash of "2000-100"
+		});
+
+		it('should return numbered lines in parseFrontmatter path by default', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = '---\ntitle: Test\n---\n\nContent here';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { parseFrontmatter: true });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe('1→---\n2→title: Test\n3→---\n4→\n5→Content here');
+			expect(parsed.totalLines).toBe(5);
+		});
+
+		it('should return raw content in parseFrontmatter path when withLineNumbers is false', async () => {
+			const mockFile = createMockTFile('test.md', {
+				ctime: 1000,
+				mtime: 2000,
+				size: 100
+			});
+			const content = '---\ntitle: Test\n---\n\nContent here';
+
+			(PathUtils.resolveFile as jest.Mock).mockReturnValue(mockFile);
+			mockVault.read = jest.fn().mockResolvedValue(content);
+
+			const result = await noteTools.readNote('test.md', { parseFrontmatter: true, withLineNumbers: false });
+
+			expect(result.isError).toBeUndefined();
+			const parsed = JSON.parse(result.content[0].text);
+			expect(parsed.content).toBe(content);
+			expect(parsed.totalLines).toBeUndefined();
 		});
 	});
 

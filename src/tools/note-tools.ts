@@ -45,7 +45,7 @@ export class NoteTools {
 		/* istanbul ignore next */
 		const parseFrontmatter = options?.parseFrontmatter ?? false;
 		/* istanbul ignore next */
-		const withLineNumbers = options?.withLineNumbers ?? false;
+		const withLineNumbers = options?.withLineNumbers ?? true;
 
 		// Validate path
 		if (!path || path.trim() === '') {
@@ -125,12 +125,37 @@ export class NoteTools {
 			// Parse frontmatter if requested
 			const extracted = FrontmatterUtils.extractFrontmatter(content);
 
+			// Apply line numbers if requested
+			let resultContent = withContent ? content : '';
+			let resultContentWithoutFrontmatter = extracted.contentWithoutFrontmatter;
+			let totalLines: number | undefined;
+
+			if (withLineNumbers && withContent) {
+				const lines = content.split('\n');
+				resultContent = lines.map((line, idx) => `${idx + 1}→${line}`).join('\n');
+				totalLines = lines.length;
+
+				if (extracted.hasFrontmatter && extracted.contentWithoutFrontmatter) {
+					const contentLines = extracted.contentWithoutFrontmatter.split('\n');
+					// Calculate the offset: frontmatter lines + 1 for the empty line after ---
+					const frontmatterLineCount = extracted.frontmatter ? extracted.frontmatter.split('\n').length + 2 : 0;
+					resultContentWithoutFrontmatter = contentLines
+						.map((line, idx) => `${frontmatterLineCount + idx + 1}→${line}`)
+						.join('\n');
+				}
+			}
+
 			const result: ParsedNote = {
 				path: file.path,
 				hasFrontmatter: extracted.hasFrontmatter,
 				/* istanbul ignore next - Conditional content inclusion tested via integration tests */
-				content: withContent ? content : ''
+				content: resultContent
 			};
+
+			// Add totalLines when line numbers are enabled
+			if (totalLines !== undefined) {
+				result.totalLines = totalLines;
+			}
 
 			// Include frontmatter if requested
 			/* istanbul ignore next - Response building branches tested via integration tests */
@@ -142,7 +167,7 @@ export class NoteTools {
 			// Include content without frontmatter if parsing
 			/* istanbul ignore next */
 			if (withContent && extracted.hasFrontmatter) {
-				result.contentWithoutFrontmatter = extracted.contentWithoutFrontmatter;
+				result.contentWithoutFrontmatter = resultContentWithoutFrontmatter;
 			}
 
 			// Add word count when content is included
