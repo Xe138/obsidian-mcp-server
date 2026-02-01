@@ -6,7 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased]
+## [1.2.0] - 2026-01-31
+
+### Added
+- **Line Numbers for `read_note`**: New `withLineNumbers` option prefixes each line with its 1-indexed line number (e.g., `1→# Title`, `2→Content`)
+  - Returns `totalLines` count for easy reference
+  - Designed for use with `update_sections` to ensure accurate line-based edits
+  - Example: `read_note("note.md", { withLineNumbers: true })` returns numbered content
+
+- **Force Parameter for `update_sections`**: New `force` parameter allows bypassing the version check
+  - Use `force: true` to skip the `ifMatch` requirement (not recommended for normal use)
+  - Intended for scenarios where you intentionally want to overwrite without checking
+
+### Changed
+- **`read_note` Always Returns `versionId`**: The response now always includes `versionId` for concurrency control
+  - Previously only returned when `parseFrontmatter: true`
+  - Enables safe `update_sections` workflows by providing the ETag upfront
+
+### Breaking Changes
+- **`update_sections` Now Requires `ifMatch`**: The `ifMatch` parameter is now required by default
+  - Prevents accidental overwrites when file content has changed since reading
+  - Get `versionId` from `read_note` response and pass it as `ifMatch`
+  - To opt-out, pass `force: true` (not recommended)
+  - Error message guides users on proper usage workflow
 
 ---
 
