@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.0] - 2026-02-06
+
+### Added
+- **Remote IP access**: New `allowedIPs` setting accepts comma-separated IPs and CIDR ranges (e.g., `100.64.0.0/10` for Tailscale) to allow non-localhost connections
+  - Server automatically binds to `0.0.0.0` when remote IPs are configured, otherwise stays on `127.0.0.1`
+  - Three-layer network validation: source IP check, CORS origin check, and host header validation
+  - Bearer token authentication remains mandatory for all connections
+  - Localhost is always implicitly allowed — cannot lock out local access
+  - IPv4-mapped IPv6 addresses (`::ffff:x.x.x.x`) handled transparently
+  - New `network-utils` module with CIDR parsing and IP matching (no external dependencies)
+  - Security warning displayed in settings when remote access is enabled
+
+---
+
 ## [1.2.0] - 2026-01-31
 
 ### Added
