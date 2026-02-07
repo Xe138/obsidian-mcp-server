@@ -101,7 +101,8 @@ export class MCPServer {
 	public async start(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			try {
-				this.server = this.app.listen(this.settings.port, '127.0.0.1', () => {
+				const bindAddress = this.settings.allowedIPs?.trim() ? '0.0.0.0' : '127.0.0.1';
+				this.server = this.app.listen(this.settings.port, bindAddress, () => {
 					resolve();
 				});
 

@@ -138,9 +138,10 @@ export class MCPServerSettingTab extends PluginSettingTab {
 		const statusEl = containerEl.createEl('div', {cls: 'mcp-server-status'});
 		const isRunning = this.plugin.mcpServer?.isRunning() ?? false;
 
+		const bindAddress = this.plugin.settings.allowedIPs?.trim() ? '0.0.0.0' : '127.0.0.1';
 		statusEl.createEl('p', {
 			text: isRunning
-				? `✅ Running on http://127.0.0.1:${this.plugin.settings.port}/mcp`
+				? `✅ Running on http://${bindAddress}:${this.plugin.settings.port}/mcp`
 				: '⭕ Stopped'
 		});
 
@@ -202,6 +203,29 @@ export class MCPServerSettingTab extends PluginSettingTab {
 						}
 					}
 				}));
+
+		// Allowed IPs setting
+		new Setting(containerEl)
+			.setName('Allowed IPs')
+			.setDesc('Comma-separated IPs or CIDR ranges allowed to connect remotely (e.g., 100.64.0.0/10, 192.168.1.50). Leave empty for localhost only. Restart required.')
+			.addText(text => text
+				.setPlaceholder('100.64.0.0/10, 192.168.1.0/24')
+				.setValue(this.plugin.settings.allowedIPs)
+				.onChange(async (value) => {
+					this.plugin.settings.allowedIPs = value;
+					await this.plugin.saveSettings();
+					if (this.plugin.mcpServer?.isRunning()) {
+						new Notice('⚠️ Server restart required for allowed IPs changes to take effect');
+					}
+				}));
+
+		// Security note when remote access is enabled
+		if (this.plugin.settings.allowedIPs?.trim()) {
+			const securityNote = containerEl.createEl('div', {cls: 'mcp-security-note'});
+			securityNote.createEl('p', {
+				text: '⚠️ Server is accessible from non-localhost IPs. Ensure your API key is kept secure.'
+			});
+		}
 
 		// Authentication (Always Enabled)
 		const authDetails = containerEl.createEl('details', {cls: 'mcp-auth-section'});

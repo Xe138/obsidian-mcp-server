@@ -3,12 +3,24 @@ import express from 'express';
 import cors from 'cors';
 import { MCPServerSettings } from '../types/settings-types';
 import { ErrorCodes, JSONRPCResponse } from '../types/mcp-types';
+import { parseAllowedIPs, isIPAllowed } from '../utils/network-utils';
 
 export function setupMiddleware(app: Express, settings: MCPServerSettings, createErrorResponse: (id: string | number | null, code: number, message: string) => JSONRPCResponse): void {
+	const allowList = parseAllowedIPs(settings.allowedIPs);
+
 	// Parse JSON bodies
 	app.use(express.json());
 
-	// CORS configuration - Always enabled with fixed localhost-only policy
+	// Source IP validation - reject connections from unlisted IPs before any other checks
+	app.use((req: Request, res: Response, next: NextFunction) => {
+		const remoteAddress = req.socket.remoteAddress;
+		if (remoteAddress && !isIPAllowed(remoteAddress, allowList)) {
+			return res.status(403).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Connection from this IP is not allowed'));
+		}
+		next();
+	});
+
+	// CORS configuration
 	const corsOptions = {
 		origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
 			// Allow requests with no origin (like CLI clients, curl, MCP SDKs)
@@ -19,10 +31,22 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 			// Allow localhost and 127.0.0.1 on any port, both HTTP and HTTPS
 			const localhostRegex = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 			if (localhostRegex.test(origin)) {
-				callback(null, true);
-			} else {
-				callback(new Error('Not allowed by CORS'));
+				return callback(null, true);
 			}
+
+			// Check if origin hostname is in the allow-list
+			if (allowList.length > 0) {
+				try {
+					const url = new URL(origin);
+					if (isIPAllowed(url.hostname, allowList)) {
+						return callback(null, true);
+					}
+				} catch {
+					// Invalid origin URL, fall through to reject
+				}
+			}
+
+			callback(new Error('Not allowed by CORS'));
 		},
 		credentials: true
 	};
@@ -44,15 +68,27 @@ export function setupMiddleware(app: Express, settings: MCPServerSettings, creat
 		next();
 	});
 
-	// Origin validation for security (DNS rebinding protection)
+	// Host header validation for security (DNS rebinding protection)
 	app.use((req: Request, res: Response, next: NextFunction) => {
 		const host = req.headers.host;
 
-		// Only allow localhost connections
-		if (host && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
-			return res.status(403).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Only localhost connections allowed'));
+		if (!host) {
+			return next();
 		}
 
-		next();
+		// Strip port from host header
+		const hostname = host.split(':')[0];
+
+		// Always allow localhost
+		if (hostname === 'localhost' || hostname === '127.0.0.1') {
+			return next();
+		}
+
+		// Check against allow-list
+		if (allowList.length > 0 && isIPAllowed(hostname, allowList)) {
+			return next();
+		}
+
+		return res.status(403).json(createErrorResponse(null, ErrorCodes.InvalidRequest, 'Connection from this host is not allowed'));
 	});
 }
